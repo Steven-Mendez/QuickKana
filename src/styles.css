@@ -1,0 +1,153 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Inter Variable', sans-serif;
+    --font-jp: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic',
+        'Noto Sans JP', 'Meiryo', sans-serif;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    /* Kitsune logo-derived brand: vermillion #ef3924, cream #fbf7f0,
+       ink #20080b. The three semantic colors of the mark are the same as
+       those that govern the UI; --primary is the accessible tonal variant (4.9:1) of the
+       brand vermillion. */
+    --background: oklch(0.988 0.006 84.6);
+    --foreground: oklch(0.250 0.040 14);
+    --card: oklch(1 0.003 84.6);
+    --card-foreground: oklch(0.250 0.040 14);
+    --popover: oklch(1 0.003 84.6);
+    --popover-foreground: oklch(0.250 0.040 14);
+    --primary: oklch(0.575 0.190 30);
+    --primary-foreground: oklch(0.985 0.012 84.6);
+    --secondary: oklch(0.962 0.011 70);
+    --secondary-foreground: oklch(0.305 0.045 20);
+    --muted: oklch(0.962 0.011 70);
+    --muted-foreground: oklch(0.545 0.028 30);
+    --accent: oklch(0.945 0.025 45);
+    --accent-foreground: oklch(0.375 0.100 30);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.906 0.014 70);
+    --input: oklch(0.906 0.014 70);
+    --ring: oklch(0.575 0.190 30);
+    /* Mastery ramp: from barely tinted cream to deep vermillion. */
+    --chart-1: oklch(0.905 0.045 45);
+    --chart-2: oklch(0.815 0.090 38);
+    --chart-3: oklch(0.710 0.135 33);
+    --chart-4: oklch(0.575 0.190 30);
+    --chart-5: oklch(0.440 0.150 28);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.972 0.010 78);
+    --sidebar-foreground: oklch(0.250 0.040 14);
+    --sidebar-primary: oklch(0.575 0.190 30);
+    --sidebar-primary-foreground: oklch(0.985 0.012 84.6);
+    --sidebar-accent: oklch(0.945 0.025 45);
+    --sidebar-accent-foreground: oklch(0.375 0.100 30);
+    --sidebar-border: oklch(0.906 0.014 70);
+    --sidebar-ring: oklch(0.575 0.190 30);
+}
+
+.dark {
+    --background: oklch(0.178 0.017 12);
+    --foreground: oklch(0.955 0.013 84.6);
+    --card: oklch(0.228 0.021 12);
+    --card-foreground: oklch(0.955 0.013 84.6);
+    --popover: oklch(0.228 0.021 12);
+    --popover-foreground: oklch(0.955 0.013 84.6);
+    --primary: oklch(0.672 0.180 31);
+    --primary-foreground: oklch(0.185 0.020 14);
+    --secondary: oklch(0.288 0.022 14);
+    --secondary-foreground: oklch(0.955 0.013 84.6);
+    --muted: oklch(0.288 0.022 14);
+    --muted-foreground: oklch(0.718 0.021 55);
+    --accent: oklch(0.330 0.045 25);
+    --accent-foreground: oklch(0.955 0.013 84.6);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 16%);
+    --ring: oklch(0.610 0.160 31);
+    --chart-1: oklch(0.335 0.055 27);
+    --chart-2: oklch(0.440 0.105 29);
+    --chart-3: oklch(0.550 0.150 30);
+    --chart-4: oklch(0.672 0.180 31);
+    --chart-5: oklch(0.790 0.125 38);
+    --sidebar: oklch(0.228 0.021 12);
+    --sidebar-foreground: oklch(0.955 0.013 84.6);
+    --sidebar-primary: oklch(0.672 0.180 31);
+    --sidebar-primary-foreground: oklch(0.185 0.020 14);
+    --sidebar-accent: oklch(0.330 0.045 25);
+    --sidebar-accent-foreground: oklch(0.955 0.013 84.6);
+    --sidebar-border: oklch(1 0 0 / 12%);
+    --sidebar-ring: oklch(0.610 0.160 31);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+    }
+  html {
+    @apply font-sans;
+    }
+}
+@utility font-jp {
+    font-family: var(--font-jp);
+    /* Kana are square by design; proportional spacing makes them look uneven. */
+    font-feature-settings: "palt" 0;
+}
+
+@layer base {
+  /* The drill is keyboard-first — a caret parked in the answer field should
+     never be dragged away by an accidental tap on the character itself. */
+  .kana-display {
+    user-select: none;
+    }
+}
