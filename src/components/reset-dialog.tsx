@@ -1,0 +1,63 @@
+import { useState } from "react"
+import { Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { clearAllStorage } from "@/lib/storage"
+import { resetProgress } from "@/stores/progress.store"
+import { resetProgression } from "@/stores/progression.store"
+import { resetSelection } from "@/stores/selection.store"
+import { resetSettings } from "@/stores/settings.store"
+
+export function ResetDialog() {
+  const [open, setOpen] = useState(false)
+
+  const reset = () => {
+    // Storage first, then the stores. Persisting is debounced, but each store
+    // emits its *new* default on reset, so the pending write can only ever
+    // re-save defaults — no timing assumption needed for old data to stay gone.
+    clearAllStorage()
+    resetProgress()
+    resetProgression()
+    resetSelection()
+    resetSettings()
+    setOpen(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <Button variant="destructive">
+            <Trash2 className="size-4" />
+            Reset all progress
+          </Button>
+        }
+      />
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reset all progress?</DialogTitle>
+          <DialogDescription>
+            Clears attempt history, per-character stats, confusion matrix,
+            active groups, journey, and streaks. Preferences and selection
+            return to defaults. Cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline">Cancel</Button>} />
+          <Button variant="destructive" onClick={reset}>
+            Yes, reset all
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
