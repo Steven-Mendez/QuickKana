@@ -9,21 +9,22 @@ import {
   touchDay,
 } from "@/stores/progression.store"
 import { TRACKS, lessonAt } from "@/lib/journey"
+import { MOMENTUM_CEILING } from "@/lib/momentum"
 import { emptyCharStat } from "@/lib/scheduler"
 import { MASTERY_ATTEMPTS } from "@/lib/stats"
 import type { CharStat } from "@/lib/types"
 
-const mastered = (ids: Array<string>): Record<string, CharStat> =>
+/** Every id answered correctly `attempts` times and never missed. */
+const clean = (
+  ids: Array<string>,
+  attempts: number
+): Record<string, CharStat> =>
   Object.fromEntries(
-    ids.map((id) => [
-      id,
-      {
-        ...emptyCharStat(),
-        attempts: MASTERY_ATTEMPTS,
-        correct: MASTERY_ATTEMPTS,
-      },
-    ])
+    ids.map((id) => [id, { ...emptyCharStat(), attempts, correct: attempts }])
   )
+
+const mastered = (ids: Array<string>): Record<string, CharStat> =>
+  clean(ids, MASTERY_ATTEMPTS)
 
 const DAY = 24 * 60 * 60 * 1000
 /** Midday, so adding or subtracting a day can never cross a DST edge. */
@@ -47,6 +48,7 @@ describe("advanceLesson", () => {
     const unlocked = advanceLesson(
       "hiragana",
       mastered(lessonAt("hiragana", 0).ids),
+      0,
       5000
     )
 
@@ -77,6 +79,31 @@ describe("advanceLesson", () => {
     expect(
       advanceLesson("katakana", mastered(lessonAt("hiragana", 0).ids))
     ).toBeNull()
+  })
+
+  it("unlocks on fewer repetitions when the session streak vouches for them", () => {
+    const lesson = lessonAt("katakana", 0)
+    const seen = clean(lesson.ids, 3)
+
+    // Three clean sightings each: short of the cold bar, enough once a long
+    // run of correct answers has already shown the user can read them.
+    expect(advanceLesson("katakana", seen)).toBeNull()
+    expect(advanceLesson("katakana", seen, MOMENTUM_CEILING)).toBe(
+      TRACKS.katakana[1]?.id
+    )
+  })
+
+  it("never unlocks a lesson the user is actually missing, streak or not", () => {
+    const lesson = lessonAt("katakana", 0)
+    const shaky = Object.fromEntries(
+      lesson.ids.map((id) => [
+        id,
+        { ...emptyCharStat(), attempts: 10, correct: 6 },
+      ])
+    )
+
+    expect(advanceLesson("katakana", shaky, MOMENTUM_CEILING * 4)).toBeNull()
+    expect(progressionStore.state.lessons.katakana).toBe(0)
   })
 })
 

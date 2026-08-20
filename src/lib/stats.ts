@@ -139,11 +139,21 @@ export function heatmap(
  */
 export const MASTERY_ATTEMPTS = 6
 
-/** How learned a character is, 0–1, or `null` if it was never drilled. */
-export function mastery(stat: CharStat | undefined): number | null {
+/**
+ * How learned a character is, 0–1, or `null` if it was never drilled.
+ *
+ * `attemptsNeeded` is how much exposure the confidence ramp asks for. The
+ * unlock check lowers it when the session streak has already supplied the
+ * evidence — accuracy is never discounted, only the number of repetitions it
+ * has to be demonstrated over.
+ */
+export function mastery(
+  stat: CharStat | undefined,
+  attemptsNeeded = MASTERY_ATTEMPTS
+): number | null {
   if (!stat || stat.attempts === 0) return null
   const accuracy = stat.correct / stat.attempts
-  const confidence = Math.min(1, stat.attempts / MASTERY_ATTEMPTS)
+  const confidence = Math.min(1, stat.attempts / Math.max(1, attemptsNeeded))
   return accuracy * confidence
 }
 

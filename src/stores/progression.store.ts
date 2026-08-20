@@ -7,6 +7,7 @@ import {
   lessonAt,
   trackLength,
 } from "@/lib/journey"
+import { requiredAttempts } from "@/lib/momentum"
 import type { CharStat, Script } from "@/lib/types"
 
 /** Free selection, or the guided climb through one syllabary's curriculum. */
@@ -171,16 +172,31 @@ export function recordSessionResult(session: {
  * Unlocks the next lesson of a track when every character of its current one is
  * mastered. Returns the newly unlocked lesson's id, or `null` if nothing
  * changed — which is what the drill uses to celebrate the moment it happens.
+ *
+ * `streak` is the session's current run of correct answers. It shortens how
+ * many sightings each character needs — not how accurate it has to be. A user
+ * reading everything correctly has already produced the evidence that quota
+ * was there to collect, and making them grind it out anyway is how a track
+ * stalls on characters they know.
  */
 export function advanceLesson(
   script: Script,
   charStats: Record<string, CharStat>,
+  streak = 0,
   now = Date.now()
 ): string | null {
   const state = progressionStore.state
   const current = lessonOf(state, script)
   if (current >= lastLessonOf(script)) return null
-  if (!isLessonComplete(lessonAt(script, current), charStats)) return null
+  if (
+    !isLessonComplete(
+      lessonAt(script, current),
+      charStats,
+      requiredAttempts(streak)
+    )
+  ) {
+    return null
+  }
 
   const next = current + 1
   progressionStore.setState((prev) => ({

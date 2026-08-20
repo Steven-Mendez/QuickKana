@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS: Settings = {
   graduationStreak: 4,
   maxGroupSize: 4,
   burstCooldown: 4,
+  adaptivePace: true,
   acceptAliases: true,
   timeLimitEnabled: false,
   timeLimitMs: 5000,

@@ -106,6 +106,12 @@ export interface Settings {
   maxGroupSize: number
   /** General-pool items served between two confusion bursts. */
   burstCooldown: number
+  /**
+   * Let a long streak push new characters forward: the current lesson takes a
+   * bigger share of the draw and unlocks on less repetition. Off means the
+   * textbook pace regardless of how well the session is going.
+   */
+  adaptivePace: boolean
   /** Accept Nihon-shiki/Kunrei spellings (si, tu, hu, ...) as correct. */
   acceptAliases: boolean
   /** Timed mode: running out of time scores the character as a miss. */

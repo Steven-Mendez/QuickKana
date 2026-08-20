@@ -21,6 +21,7 @@ import {
   setLesson,
 } from "@/stores/progression.store"
 import { TRACKS, lessonAt } from "@/lib/journey"
+import { MOMENTUM_CEILING, MOMENTUM_FLOOR } from "@/lib/momentum"
 import { MIN_TIME_LIMIT } from "@/lib/pressure"
 import { SCRIPTS, SCRIPT_LABELS } from "@/lib/kana"
 import { useTheme } from "@/hooks/use-theme"
@@ -190,6 +191,22 @@ function SettingsPage() {
             max={20}
             onChange={(burstCooldown) => updateSettings({ burstCooldown })}
           />
+
+          <Separator />
+
+          <Row
+            id="adaptive-pace"
+            title="Speed up when I'm on a roll"
+            description={`From ${MOMENTUM_FLOOR} correct in a row the current lesson takes a bigger share of the drill, and by ${MOMENTUM_CEILING} it also unlocks the next one on fewer repetitions. A single mistake puts the normal pace back.`}
+          >
+            <Switch
+              id="adaptive-pace"
+              checked={settings.adaptivePace}
+              onCheckedChange={(checked) =>
+                updateSettings({ adaptivePace: checked })
+              }
+            />
+          </Row>
 
           <Separator />
 

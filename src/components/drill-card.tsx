@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, Flame, Target, TimerOff, Trophy, X } from "lucide-react"
+import {
+  Check,
+  Flame,
+  FastForward,
+  Target,
+  TimerOff,
+  Trophy,
+  X,
+} from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { displayPair } from "@/lib/kana"
+import { isPushingPace } from "@/lib/momentum"
 import { milestoneAt, streakTier } from "@/lib/pressure"
 import { cn } from "@/lib/utils"
 import type { ConfusionGroup, Kana, SessionState, Settings } from "@/lib/types"
@@ -51,17 +60,19 @@ export function DrillCard({
           wide screen the counter is out of the field of view entirely. */}
       <StreakCounter streak={session.streak} record={recordStreak} />
 
+      {/* One slot, three states in priority order: what this character is,
+          what it is being drilled against, and — only when neither applies —
+          why the drill has started moving faster than usual. */}
       <div className="flex h-7 items-center">
         {session.introducing ? (
           <NewCharacterHint romaji={kana.romaji} />
+        ) : settings.showGroupHint && activeGroup ? (
+          <GroupHint
+            group={activeGroup}
+            graduationStreak={settings.graduationStreak}
+          />
         ) : (
-          settings.showGroupHint &&
-          activeGroup && (
-            <GroupHint
-              group={activeGroup}
-              graduationStreak={settings.graduationStreak}
-            />
-          )
+          settings.adaptivePace && isPushingPace(session.streak) && <PaceHint />
         )}
       </div>
 
@@ -264,6 +275,26 @@ function NewCharacterHint({ romaji }: { romaji: string }) {
         reads as{" "}
         <strong className="font-semibold text-foreground">{romaji}</strong>
       </span>
+    </p>
+  )
+}
+
+/**
+ * The run is long enough that the drill has started favouring new characters
+ * and easing the unlock. Said out loud because otherwise the shift reads as
+ * the app randomly getting harder right when the user was doing well.
+ */
+function PaceHint() {
+  return (
+    <p className="flex items-baseline gap-2.5 text-sm text-muted-foreground">
+      <FastForward className="size-3.5 self-center" />
+      <span className="text-[10px] font-medium tracking-[0.18em] uppercase">
+        Picking up the pace
+      </span>
+      <span aria-hidden className="text-border">
+        /
+      </span>
+      <span>more new characters</span>
     </p>
   )
 }

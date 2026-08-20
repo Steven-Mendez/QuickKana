@@ -1,5 +1,5 @@
 import { ROWS_BY_SCRIPT, SCRIPTS } from "@/lib/kana"
-import { mastery } from "@/lib/stats"
+import { MASTERY_ATTEMPTS, mastery } from "@/lib/stats"
 import type { CharStat, Kana, KanaCategory, KanaRow, Script } from "@/lib/types"
 
 export interface Lesson {
@@ -83,11 +83,21 @@ export const trackLength = (script: Script): number => TRACKS[script].length
 export const lastLessonOf = (script: Script): number =>
   TRACKS[script].length - 1
 
-/** Mastery a character must reach before its lesson counts as learned. */
+/**
+ * Mastery a character must reach before its lesson counts as learned. This bar
+ * never moves: whatever else changes, a character still has to be read right
+ * about three times in four.
+ *
+ * What a good session does buy is exposure — `attemptsNeeded` shrinks when the
+ * streak already proves the point, so the same accuracy clears the same bar on
+ * fewer sightings. See `requiredAttempts` in `momentum.ts`.
+ */
 export const LESSON_MASTERY = 0.75
 
-export const isMastered = (stat: CharStat | undefined): boolean =>
-  (mastery(stat) ?? 0) >= LESSON_MASTERY
+export const isMastered = (
+  stat: CharStat | undefined,
+  attemptsNeeded = MASTERY_ATTEMPTS
+): boolean => (mastery(stat, attemptsNeeded) ?? 0) >= LESSON_MASTERY
 
 export const lessonAt = (script: Script, index: number): Lesson =>
   TRACKS[script][Math.max(0, Math.min(lastLessonOf(script), index))] as Lesson
@@ -122,8 +132,10 @@ export function lessonProgress(
 
 export const isLessonComplete = (
   lesson: Lesson,
-  charStats: Record<string, CharStat>
-): boolean => lesson.ids.every((id) => isMastered(charStats[id]))
+  charStats: Record<string, CharStat>,
+  attemptsNeeded = MASTERY_ATTEMPTS
+): boolean =>
+  lesson.ids.every((id) => isMastered(charStats[id], attemptsNeeded))
 
 /** One track's completion, counting characters rather than lessons. */
 export function trackProgress(
