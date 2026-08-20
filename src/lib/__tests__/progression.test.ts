@@ -8,7 +8,7 @@ import {
   setLesson,
   touchDay,
 } from "@/stores/progression.store"
-import { TRACKS, lessonAt } from "@/lib/journey"
+import { TRACKS, lessonAt, poolUpTo, retention } from "@/lib/journey"
 import { PASSES_FULL } from "@/lib/momentum"
 import { emptyCharStat } from "@/lib/scheduler"
 import { MASTERY_ATTEMPTS } from "@/lib/stats"
@@ -91,6 +91,46 @@ describe("advanceLesson", () => {
     expect(
       advanceLesson("katakana", seen, lesson.ids.length * PASSES_FULL)
     ).toBe(TRACKS.katakana[1]?.id)
+  })
+
+  it("will not move on while the characters behind it have been forgotten", () => {
+    setLesson("katakana", 3)
+    const current = lessonAt("katakana", 3)
+    const earlier = poolUpTo("katakana", 2)
+
+    // The section itself is learned, but half of everything before it is not.
+    const forgotten = {
+      ...mastered(current.ids),
+      ...clean(earlier, MASTERY_ATTEMPTS),
+      ...Object.fromEntries(
+        earlier
+          .slice(0, Math.ceil(earlier.length / 2))
+          .map((id) => [id, { ...emptyCharStat(), attempts: 10, correct: 4 }])
+      ),
+    }
+
+    expect(advanceLesson("katakana", forgotten)).toBeNull()
+    expect(progressionStore.state.lessons.katakana).toBe(3)
+
+    // Bring the review back and the same section passes.
+    const remembered = { ...mastered(current.ids), ...mastered(earlier) }
+    expect(advanceLesson("katakana", remembered)).toBe(TRACKS.katakana[4]?.id)
+  })
+
+  it("tolerates a single rusty character in a large review pool", () => {
+    setLesson("hiragana", 5)
+    const current = lessonAt("hiragana", 5)
+    const earlier = poolUpTo("hiragana", 4)
+
+    const stats = {
+      ...mastered(current.ids),
+      ...mastered(earlier),
+      // One bad character out of twenty-odd must not stall the curriculum.
+      [earlier[0] as string]: { ...emptyCharStat(), attempts: 10, correct: 4 },
+    }
+
+    expect(retention("hiragana", 5, stats).slipped).toEqual([earlier[0]])
+    expect(advanceLesson("hiragana", stats)).toBe(TRACKS.hiragana[6]?.id)
   })
 
   it("never unlocks a lesson the user is actually missing, streak or not", () => {

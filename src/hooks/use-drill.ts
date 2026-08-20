@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo } from "react"
 import { useSelector } from "@tanstack/react-store"
 import { getKana, requireKana, resolveTyped } from "@/lib/kana"
 import { isCorrect } from "@/lib/kana/romaji"
-import { lessonAt, poolUpTo } from "@/lib/journey"
+import { isLessonComplete, lessonAt, poolUpTo, retention } from "@/lib/journey"
 import { timeLimitFor } from "@/lib/pressure"
-import { isPushingPace, lessonBoost } from "@/lib/momentum"
+import { LESSON_BOOST_MAX, isPushingPace, lessonBoost } from "@/lib/momentum"
 import { nextKana } from "@/lib/scheduler"
 import {
   advanceLesson,
@@ -49,6 +49,12 @@ function currentLesson(): Lesson | null {
  * `lessonStreak` decides how hard that lesson is weighted: the better the user
  * is doing *on the new characters*, the less of the session is spent
  * re-confirming the ones already answered right a dozen times over.
+ *
+ * Once the section is learned the weight moves to whatever review has slipped,
+ * because that is now the only thing standing between the user and the next
+ * lesson. Without this the drill would spend its boost drilling five kana that
+ * are already mastered while the characters actually blocking the unlock
+ * surfaced once every forty prompts.
  */
 function currentPool(lessonStreak: number): {
   ids: Array<string>
@@ -58,12 +64,20 @@ function currentPool(lessonStreak: number): {
   const lesson = currentLesson()
   if (!lesson) return { ids: selectedIds(selectionStore.state) }
 
+  const { charStats } = progressStore.state
+  const ids = poolUpTo(progression.track, lesson.index)
+  const blocking = isLessonComplete(lesson, charStats)
+    ? retention(progression.track, lesson.index, charStats).slipped
+    : []
+
   return {
-    ids: poolUpTo(progression.track, lesson.index),
-    boost: {
-      ids: new Set(lesson.ids),
-      factor: lessonBoost(lessonStreak, lesson.ids.length),
-    },
+    ids,
+    boost: blocking.length
+      ? { ids: new Set(blocking), factor: LESSON_BOOST_MAX }
+      : {
+          ids: new Set(lesson.ids),
+          factor: lessonBoost(lessonStreak, lesson.ids.length),
+        },
   }
 }
 

@@ -4,11 +4,14 @@ import { Check, Lock } from "lucide-react"
 
 import { Progress } from "@/components/ui/progress"
 import {
+  RETENTION,
   TRACKS,
+  holdsUp,
   isMastered,
   lastLessonOf,
   lessonAt,
   lessonProgress,
+  retention,
   trackProgress,
 } from "@/lib/journey"
 import { SCRIPTS, SCRIPT_LABELS, getKana } from "@/lib/kana"
@@ -94,9 +97,18 @@ export function JourneyPanel() {
         <p className="mt-4 text-xs text-muted-foreground">
           {finished
             ? "You've completed this syllabary. Reviews keep using your mistakes to pick what shows up."
-            : "Once you master these characters, the next lesson unlocks. Earlier ones still show up so you don't forget them."}
+            : "Master these characters and keep the earlier ones fresh, and the next lesson unlocks."}
         </p>
       </section>
+
+      {!finished && lesson > 0 && (
+        <RetentionSection
+          track={track}
+          lesson={lesson}
+          charStats={charStats}
+          lessonDone={progress.pending.length === 0}
+        />
+      )}
 
       <section className="space-y-2">
         <div className="flex items-baseline justify-between text-sm">
@@ -151,6 +163,86 @@ export function JourneyPanel() {
         </div>
       </section>
     </div>
+  )
+}
+
+/** How many slipped characters to name before the list stops being readable. */
+const SLIPPED_SHOWN = 8
+
+/**
+ * The second gate on the next lesson: what you have already learned has to
+ * still be there. It only earns a place on screen once there *is* something
+ * behind the current lesson to forget, and it says which characters slipped —
+ * "keep your reviews up" is advice nobody can act on.
+ */
+function RetentionSection({
+  track,
+  lesson,
+  charStats,
+  lessonDone,
+}: {
+  track: Script
+  lesson: number
+  charStats: Record<string, CharStat>
+  lessonDone: boolean
+}) {
+  const value = useMemo(
+    () => retention(track, lesson, charStats),
+    [track, lesson, charStats]
+  )
+  const ok = holdsUp(value)
+
+  return (
+    <section className="space-y-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+        <h3 className="font-medium">Earlier characters</h3>
+        <p
+          className={cn(
+            "tabular-nums",
+            ok
+              ? "text-muted-foreground"
+              : "font-medium text-amber-600 dark:text-amber-400"
+          )}
+        >
+          {value.held} of {value.total} still solid
+        </p>
+      </div>
+
+      <Progress value={value.ratio * 100} />
+
+      {value.slipped.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          {value.slipped.slice(0, SLIPPED_SHOWN).map((id) => (
+            <span
+              key={id}
+              title={`${getKana(id)?.romaji} — ${formatPercent(
+                mastery(charStats[id]) ?? 0
+              )} mastery`}
+              className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-jp text-sm text-amber-600 dark:text-amber-400"
+            >
+              {getKana(id)?.char}
+            </span>
+          ))}
+          {value.slipped.length > SLIPPED_SHOWN && (
+            <span className="text-xs text-muted-foreground tabular-nums">
+              +{value.slipped.length - SLIPPED_SHOWN}
+            </span>
+          )}
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        {ok
+          ? `At least ${formatPercent(
+              RETENTION
+            )} of them have to hold up for the next lesson to unlock.`
+          : lessonDone
+            ? "The next lesson is waiting on these, so the drill is showing them first."
+            : `These have slipped below the bar. Bring them back to ${formatPercent(
+                RETENTION
+              )} and the next lesson can unlock.`}
+      </p>
+    </section>
   )
 }
 

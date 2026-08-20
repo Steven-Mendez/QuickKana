@@ -137,6 +137,56 @@ export const isLessonComplete = (
 ): boolean =>
   lesson.ids.every((id) => isMastered(charStats[id], attemptsNeeded))
 
+/**
+ * Share of the earlier characters that has to still hold up before a track
+ * moves on.
+ *
+ * Not 100%: in a pool of forty kana there is always one having a bad day, and
+ * blocking the whole curriculum on it would turn the journey into a grind. Not
+ * much lower either — the point of the gate is that a section is only passed
+ * when the user knows it *and* still reads everything that came before, which
+ * is the difference between learning a syllabary and speed-running a list.
+ */
+export const RETENTION = 0.9
+
+export interface Retention {
+  /** Earlier characters still at or above the mastery bar. */
+  held: number
+  total: number
+  ratio: number
+  /** Earlier characters that have fallen below it, weakest first. */
+  slipped: Array<string>
+}
+
+/**
+ * How well everything unlocked *before* `index` is holding up.
+ *
+ * Always measured against the standard bar, never the eased one: a good run on
+ * the new section is evidence about that section and nothing else, and letting
+ * it discount the review check is exactly the hole this gate exists to close.
+ */
+export function retention(
+  script: Script,
+  index: number,
+  charStats: Record<string, CharStat>
+): Retention {
+  const earlier = poolUpTo(script, index - 1)
+  const slipped = earlier
+    .filter((id) => !isMastered(charStats[id]))
+    .sort((a, b) => (mastery(charStats[a]) ?? 0) - (mastery(charStats[b]) ?? 0))
+  const held = earlier.length - slipped.length
+
+  return {
+    held,
+    total: earlier.length,
+    // The first lesson of a track has nothing behind it to forget.
+    ratio: earlier.length === 0 ? 1 : held / earlier.length,
+    slipped,
+  }
+}
+
+export const holdsUp = (value: Retention): boolean => value.ratio >= RETENTION
+
 /** One track's completion, counting characters rather than lessons. */
 export function trackProgress(
   script: Script,

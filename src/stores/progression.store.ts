@@ -2,9 +2,11 @@ import { createStore } from "@tanstack/store"
 import { STORAGE_KEYS, loadPersisted, persist } from "@/lib/storage"
 import {
   TRACKS,
+  holdsUp,
   isLessonComplete,
   lastLessonOf,
   lessonAt,
+  retention,
   trackLength,
 } from "@/lib/journey"
 import { requiredAttempts } from "@/lib/momentum"
@@ -169,9 +171,15 @@ export function recordSessionResult(session: {
 }
 
 /**
- * Unlocks the next lesson of a track when every character of its current one is
- * mastered. Returns the newly unlocked lesson's id, or `null` if nothing
- * changed — which is what the drill uses to celebrate the moment it happens.
+ * Unlocks the next lesson of a track. Returns the newly unlocked lesson's id,
+ * or `null` if nothing changed — which is what the drill uses to celebrate the
+ * moment it happens.
+ *
+ * Two gates, and both have to be open. The section itself has to be learned,
+ * and everything unlocked before it has to still be readable: moving on is a
+ * claim about the whole track so far, not just about the five characters last
+ * introduced. Without the second gate a user can outrun their own memory,
+ * unlocking ん while あ quietly rots behind them.
  *
  * `streak` is the run of correct answers on *this lesson's own characters*.
  * It shortens how many sightings each of them needs — not how accurate they
@@ -199,6 +207,8 @@ export function advanceLesson(
   ) {
     return null
   }
+
+  if (!holdsUp(retention(script, current, charStats))) return null
 
   const next = current + 1
   progressionStore.setState((prev) => ({
