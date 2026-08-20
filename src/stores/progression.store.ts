@@ -173,11 +173,11 @@ export function recordSessionResult(session: {
  * mastered. Returns the newly unlocked lesson's id, or `null` if nothing
  * changed — which is what the drill uses to celebrate the moment it happens.
  *
- * `streak` is the session's current run of correct answers. It shortens how
- * many sightings each character needs — not how accurate it has to be. A user
- * reading everything correctly has already produced the evidence that quota
- * was there to collect, and making them grind it out anyway is how a track
- * stalls on characters they know.
+ * `streak` is the run of correct answers on *this lesson's own characters*.
+ * It shortens how many sightings each of them needs — not how accurate they
+ * have to be. A user reading the section faultlessly has already produced the
+ * evidence that quota was there to collect, and making them grind it out
+ * anyway is how a track stalls on characters they know.
  */
 export function advanceLesson(
   script: Script,
@@ -188,11 +188,13 @@ export function advanceLesson(
   const state = progressionStore.state
   const current = lessonOf(state, script)
   if (current >= lastLessonOf(script)) return null
+
+  const lesson = lessonAt(script, current)
   if (
     !isLessonComplete(
-      lessonAt(script, current),
+      lesson,
       charStats,
-      requiredAttempts(streak)
+      requiredAttempts(streak, lesson.ids.length)
     )
   ) {
     return null

@@ -9,7 +9,7 @@ import {
   touchDay,
 } from "@/stores/progression.store"
 import { TRACKS, lessonAt } from "@/lib/journey"
-import { MOMENTUM_CEILING } from "@/lib/momentum"
+import { PASSES_FULL } from "@/lib/momentum"
 import { emptyCharStat } from "@/lib/scheduler"
 import { MASTERY_ATTEMPTS } from "@/lib/stats"
 import type { CharStat } from "@/lib/types"
@@ -81,16 +81,16 @@ describe("advanceLesson", () => {
     ).toBeNull()
   })
 
-  it("unlocks on fewer repetitions when the session streak vouches for them", () => {
+  it("unlocks on fewer repetitions when the section's own streak vouches for them", () => {
     const lesson = lessonAt("katakana", 0)
     const seen = clean(lesson.ids, 3)
 
-    // Three clean sightings each: short of the cold bar, enough once a long
-    // run of correct answers has already shown the user can read them.
+    // Three clean sightings each: short of the cold bar, enough once the user
+    // has read the whole section faultlessly three times over.
     expect(advanceLesson("katakana", seen)).toBeNull()
-    expect(advanceLesson("katakana", seen, MOMENTUM_CEILING)).toBe(
-      TRACKS.katakana[1]?.id
-    )
+    expect(
+      advanceLesson("katakana", seen, lesson.ids.length * PASSES_FULL)
+    ).toBe(TRACKS.katakana[1]?.id)
   })
 
   it("never unlocks a lesson the user is actually missing, streak or not", () => {
@@ -102,7 +102,9 @@ describe("advanceLesson", () => {
       ])
     )
 
-    expect(advanceLesson("katakana", shaky, MOMENTUM_CEILING * 4)).toBeNull()
+    expect(
+      advanceLesson("katakana", shaky, lesson.ids.length * PASSES_FULL * 4)
+    ).toBeNull()
     expect(progressionStore.state.lessons.katakana).toBe(0)
   })
 })

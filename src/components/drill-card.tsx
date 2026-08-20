@@ -10,7 +10,6 @@ import {
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { displayPair } from "@/lib/kana"
-import { isPushingPace } from "@/lib/momentum"
 import { milestoneAt, streakTier } from "@/lib/pressure"
 import { cn } from "@/lib/utils"
 import type { ConfusionGroup, Kana, SessionState, Settings } from "@/lib/types"
@@ -24,6 +23,8 @@ interface DrillCardProps {
   limitMs: number | null
   /** Longest run of correct answers ever, so a new record can be called out. */
   recordStreak: number
+  /** The run on the current lesson is long enough that the drill is speeding up. */
+  pushingPace: boolean
   onInput: (value: string) => void
   onSubmit: () => void
 }
@@ -40,6 +41,7 @@ export function DrillCard({
   activeGroup,
   limitMs,
   recordStreak,
+  pushingPace,
   onInput,
   onSubmit,
 }: DrillCardProps) {
@@ -72,7 +74,7 @@ export function DrillCard({
             graduationStreak={settings.graduationStreak}
           />
         ) : (
-          settings.adaptivePace && isPushingPace(session.streak) && <PaceHint />
+          pushingPace && <PaceHint />
         )}
       </div>
 

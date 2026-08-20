@@ -170,6 +170,12 @@ export interface SessionState {
   correct: number
   streak: number
   bestStreak: number
+  /**
+   * Consecutive correct first attempts on the characters of the lesson being
+   * introduced — the streak the adaptive pacing runs on. Answers on review
+   * kana never touch it, and it resets the moment a new lesson unlocks.
+   */
+  lessonStreak: number
   /** Group ids that graduated during this session, for the summary. */
   graduated: Array<string>
   /** Lesson ids unlocked during this session, for the summary. */

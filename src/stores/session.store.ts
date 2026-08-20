@@ -19,6 +19,7 @@ const newSession = (): SessionState => ({
   correct: 0,
   streak: 0,
   bestStreak: 0,
+  lessonStreak: 0,
   graduated: [],
   unlocked: [],
   ended: false,

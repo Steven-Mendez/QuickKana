@@ -21,7 +21,7 @@ import {
   setLesson,
 } from "@/stores/progression.store"
 import { TRACKS, lessonAt } from "@/lib/journey"
-import { MOMENTUM_CEILING, MOMENTUM_FLOOR } from "@/lib/momentum"
+import { PASSES_FLOOR, PASSES_FULL } from "@/lib/momentum"
 import { MIN_TIME_LIMIT } from "@/lib/pressure"
 import { SCRIPTS, SCRIPT_LABELS } from "@/lib/kana"
 import { useTheme } from "@/hooks/use-theme"
@@ -197,7 +197,7 @@ function SettingsPage() {
           <Row
             id="adaptive-pace"
             title="Speed up when I'm on a roll"
-            description={`From ${MOMENTUM_FLOOR} correct in a row the current lesson takes a bigger share of the drill, and by ${MOMENTUM_CEILING} it also unlocks the next one on fewer repetitions. A single mistake puts the normal pace back.`}
+            description={`Counts your run on the current lesson's own characters, not on review. After ${PASSES_FLOOR} clean pass through them they take a bigger share of the drill, and by ${PASSES_FULL} the next lesson unlocks on fewer repetitions. One mistake on them puts the normal pace back.`}
           >
             <Switch
               id="adaptive-pace"

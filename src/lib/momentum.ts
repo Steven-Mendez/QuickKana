@@ -8,21 +8,36 @@ import { MASTERY_ATTEMPTS } from "@/lib/stats"
  * teaching and is only confirming, and the right answer to that is to move on
  * — show more of what is new, and stop holding the next lesson back.
  *
- * The regulator is the streak itself. One miss drops it to zero and the pace
- * returns to the textbook default, so the drill only accelerates for exactly
- * as long as the user is keeping up with it.
+ * The streak that counts here is the one *inside the lesson being introduced*,
+ * never the session's overall run. Once a track is a dozen lessons deep most
+ * answers are review of characters the user learned days ago, and a streak fed
+ * by those says nothing about あいうえお — it would pin the pace at maximum
+ * from the first prompt and unlock sections the user never actually read.
+ *
+ * The regulator is the streak itself. One miss inside the section drops it to
+ * zero and the pace returns to the textbook default, so the drill only
+ * accelerates for exactly as long as the user is keeping up with it.
  */
 
-/** Correct answers in a row before the pace starts to pick up at all. */
-export const MOMENTUM_FLOOR = 5
+/** Clean passes through the section before the pace picks up at all. */
+export const PASSES_FLOOR = 1
 
-/** Streak at which the push is at full strength. */
-export const MOMENTUM_CEILING = 25
+/** ...and before the push is at full strength. */
+export const PASSES_FULL = 3
 
-/** 0–1: how strongly the session is saying "I know this already, move on". */
-export function momentum(streak: number): number {
-  const span = MOMENTUM_CEILING - MOMENTUM_FLOOR
-  return Math.max(0, Math.min(1, (streak - MOMENTUM_FLOOR) / span))
+/**
+ * 0–1: how strongly the section is saying "I know these already, move on".
+ *
+ * Scaled by how many characters the section holds, because a run of ten means
+ * something very different across three characters than across five. In passes
+ * rather than answers it reads the same at every size: one clean lap to start
+ * picking up, three to be at full speed.
+ */
+export function momentum(streak: number, lessonSize: number): number {
+  const size = Math.max(1, lessonSize)
+  const floor = size * PASSES_FLOOR
+  const span = size * (PASSES_FULL - PASSES_FLOOR)
+  return Math.max(0, Math.min(1, (streak - floor) / span))
 }
 
 /** How much more often the lesson being introduced shows up, from a cold start. */
@@ -32,13 +47,14 @@ export const LESSON_BOOST = 3
  * ...and at full momentum, where the new characters all but take the draw over.
  *
  * Review never stops entirely: mastered kana keep their floor weight, so a
- * boosted lesson takes roughly four fifths of the picks rather than all of
+ * boosted lesson takes roughly three quarters of the picks rather than all of
  * them. Nothing unlocked earlier gets a chance to rot.
  */
 export const LESSON_BOOST_MAX = 12
 
-export const lessonBoost = (streak: number): number =>
-  LESSON_BOOST + (LESSON_BOOST_MAX - LESSON_BOOST) * momentum(streak)
+export const lessonBoost = (streak: number, lessonSize: number): number =>
+  LESSON_BOOST +
+  (LESSON_BOOST_MAX - LESSON_BOOST) * momentum(streak, lessonSize)
 
 /**
  * The fewest sightings the confidence ramp will ever settle for. Three is
@@ -53,13 +69,13 @@ export const MASTERY_ATTEMPTS_FLOOR = 3
  * (`LESSON_MASTERY`) never moves, so a character missed a third of the time
  * stays unlearned however long the run behind it.
  *
- * With a clean record that is five sightings cold and three at full momentum —
- * the difference between a lesson that drags on and one that gets out of the
- * way of the characters the user has not met yet.
+ * With a clean record that is five sightings cold and three at full momentum,
+ * which lines up with what the streak had to be worth to get there: three
+ * faultless passes through the section is three sightings of each character.
  */
-export const requiredAttempts = (streak: number): number =>
+export const requiredAttempts = (streak: number, lessonSize: number): number =>
   MASTERY_ATTEMPTS -
-  (MASTERY_ATTEMPTS - MASTERY_ATTEMPTS_FLOOR) * momentum(streak)
+  (MASTERY_ATTEMPTS - MASTERY_ATTEMPTS_FLOOR) * momentum(streak, lessonSize)
 
 /**
  * Momentum high enough to be worth telling the user about. Below this the pace
@@ -67,5 +83,5 @@ export const requiredAttempts = (streak: number): number =>
  */
 const VISIBLE_AT = 0.34
 
-export const isPushingPace = (streak: number): boolean =>
-  momentum(streak) >= VISIBLE_AT
+export const isPushingPace = (streak: number, lessonSize: number): boolean =>
+  momentum(streak, lessonSize) >= VISIBLE_AT

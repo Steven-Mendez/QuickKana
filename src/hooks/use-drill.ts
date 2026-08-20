@@ -4,7 +4,7 @@ import { getKana, requireKana, resolveTyped } from "@/lib/kana"
 import { isCorrect } from "@/lib/kana/romaji"
 import { lessonAt, poolUpTo } from "@/lib/journey"
 import { timeLimitFor } from "@/lib/pressure"
-import { lessonBoost } from "@/lib/momentum"
+import { isPushingPace, lessonBoost } from "@/lib/momentum"
 import { nextKana } from "@/lib/scheduler"
 import {
   advanceLesson,
@@ -27,31 +27,42 @@ import {
   showPick,
   startSession,
 } from "@/stores/session.store"
+import type { Lesson } from "@/lib/journey"
+import type { SessionState } from "@/lib/types"
+
+/**
+ * The lesson currently being introduced, or `null` outside guided mode — free
+ * mode has no curriculum, so nothing to pace against.
+ */
+function currentLesson(): Lesson | null {
+  const progression = progressionStore.state
+  if (progression.mode !== "journey") return null
+  const { track } = progression
+  return lessonAt(track, lessonOf(progression, track))
+}
 
 /**
  * What the drill draws from. In guided mode the pool is everything unlocked so
  * far, with the current lesson weighted up; in free mode it is exactly what the
  * user ticked in the selector.
  *
- * `streak` decides how hard the lesson is weighted: the better the session is
- * going, the less of it is spent re-confirming characters already answered
- * right a dozen times in a row.
+ * `lessonStreak` decides how hard that lesson is weighted: the better the user
+ * is doing *on the new characters*, the less of the session is spent
+ * re-confirming the ones already answered right a dozen times over.
  */
-function currentPool(streak: number): {
+function currentPool(lessonStreak: number): {
   ids: Array<string>
   boost?: { ids: Set<string>; factor: number }
 } {
   const progression = progressionStore.state
-  if (progression.mode !== "journey") {
-    return { ids: selectedIds(selectionStore.state) }
-  }
-  const { track } = progression
-  const lesson = lessonOf(progression, track)
+  const lesson = currentLesson()
+  if (!lesson) return { ids: selectedIds(selectionStore.state) }
+
   return {
-    ids: poolUpTo(track, lesson),
+    ids: poolUpTo(progression.track, lesson.index),
     boost: {
-      ids: new Set(lessonAt(track, lesson).ids),
-      factor: lessonBoost(streak),
+      ids: new Set(lesson.ids),
+      factor: lessonBoost(lessonStreak, lesson.ids.length),
     },
   }
 }
@@ -62,6 +73,28 @@ function currentPool(streak: number): {
  */
 const pacingStreak = (streak: number): number =>
   settingsStore.state.adaptivePace ? streak : 0
+
+/**
+ * Where `lessonStreak` goes after one answer.
+ *
+ * Only the lesson's own characters move it — a review kana answered right says
+ * nothing about the section being learned, and that is the whole point of
+ * tracking this separately from the session streak.
+ *
+ * The first sighting of a character is exempt in both directions: the drill
+ * shows the reading there, so neither typing it nor fumbling it is evidence.
+ */
+function nextLessonStreak(
+  session: SessionState,
+  kanaId: string,
+  correct: boolean
+): number {
+  const lesson = currentLesson()
+  if (!lesson || session.introducing || !lesson.ids.includes(kanaId)) {
+    return session.lessonStreak
+  }
+  return correct ? session.lessonStreak + 1 : 0
+}
 
 export function useDrill() {
   const session = useSelector(sessionStore, (s) => s)
@@ -80,7 +113,7 @@ export function useDrill() {
 
   const advance = useCallback(() => {
     const state = sessionStore.state
-    const { ids, boost } = currentPool(pacingStreak(state.streak))
+    const { ids, boost } = currentPool(pacingStreak(state.lessonStreak))
     const { pick, state: schedulerState } = nextKana(
       {
         lastShownId: state.lastShownId,
@@ -155,16 +188,18 @@ export function useDrill() {
       settingsStore.state
     )
 
+    // Computed before the state below is written: the unlock has to be judged
+    // on the streak this answer just extended, not the stale one.
+    const lessonStreak = nextLessonStreak(state, shown.id, correct)
+
     // A mastered lesson only unlocks the next one on a correct answer, which
-    // is the only moment mastery can have gone up. The streak passed here is
-    // the one this answer just extended — the session state below has not been
-    // written yet, and an off-by-one would ease the bar on stale evidence.
+    // is the only moment mastery can have gone up.
     const unlocked =
       correct && progressionStore.state.mode === "journey"
         ? advanceLesson(
             progressionStore.state.track,
             progressStore.state.charStats,
-            pacingStreak(state.streak + 1)
+            pacingStreak(lessonStreak)
           )
         : null
 
@@ -176,6 +211,9 @@ export function useDrill() {
         correct: prev.correct + (correct ? 1 : 0),
         streak,
         bestStreak: Math.max(prev.bestStreak, streak),
+        // A new section starts cold: carrying the run over would hand the
+        // lesson after it an unlock nobody earned on its characters.
+        lessonStreak: unlocked === null ? lessonStreak : 0,
         graduated: [...prev.graduated, ...graduated],
         unlocked:
           unlocked === null ? prev.unlocked : [...prev.unlocked, unlocked],
@@ -224,6 +262,7 @@ export function useDrill() {
       ...prev,
       attempts: prev.attempts + 1,
       streak: 0,
+      lessonStreak: nextLessonStreak(prev, shown.id, false),
       phase: "retry",
       missedCurrent: true,
       input: "",
@@ -266,6 +305,7 @@ export function useDrill() {
         ...prev,
         attempts: prev.attempts + 1,
         streak: 0,
+        lessonStreak: nextLessonStreak(prev, shown.id, false),
       }))
     }
     advance()
@@ -286,6 +326,16 @@ export function useDrill() {
     return progressStore.state.groups[session.current.source.groupId] ?? null
   }, [session.current])
 
+  /** Whether the run on this section is long enough to be visibly speeding up. */
+  const pushingPace = useMemo(() => {
+    if (!settings.adaptivePace || progression.mode !== "journey") return false
+    const lesson = lessonAt(
+      progression.track,
+      lessonOf(progression, progression.track)
+    )
+    return isPushingPace(session.lessonStreak, lesson.ids.length)
+  }, [settings.adaptivePace, progression, session.lessonStreak])
+
   return {
     session,
     settings,
@@ -294,6 +344,7 @@ export function useDrill() {
     pool,
     limitMs,
     activeGroup,
+    pushingPace,
     setInput,
     submit,
     skip,

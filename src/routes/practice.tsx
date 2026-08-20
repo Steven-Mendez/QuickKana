@@ -25,6 +25,7 @@ function Practice() {
     pool,
     limitMs,
     activeGroup,
+    pushingPace,
     setInput,
     submit,
     skip,
@@ -81,6 +82,7 @@ function Practice() {
           activeGroup={activeGroup}
           limitMs={limitMs}
           recordStreak={recordStreak}
+          pushingPace={pushingPace}
           onInput={setInput}
           onSubmit={submit}
         />
