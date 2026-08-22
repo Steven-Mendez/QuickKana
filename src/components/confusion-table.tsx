@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { useTranslation } from "react-i18next"
 import {
   Table,
   TableBody,
@@ -16,6 +17,7 @@ import type { ConfusionPair } from "@/lib/stats"
 type Key = "count" | "share" | "shown"
 
 export function ConfusionTable({ pairs }: { pairs: Array<ConfusionPair> }) {
+  const { t } = useTranslation()
   const [sort, setSort] = useState<SortState<Key>>({
     key: "count",
     direction: "desc",
@@ -37,7 +39,7 @@ export function ConfusionTable({ pairs }: { pairs: Array<ConfusionPair> }) {
   if (pairs.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        No character confusions recorded yet.
+        {t("confusionTable.empty")}
       </p>
     )
   }
@@ -49,21 +51,21 @@ export function ConfusionTable({ pairs }: { pairs: Array<ConfusionPair> }) {
       <TableHeader>
         <TableRow>
           <SortableHeader
-            label="Shown"
+            label={t("confusionTable.shown")}
             sortKey="shown"
             sort={sort}
             onSort={onSort}
           />
-          <TableHead>You typed</TableHead>
+          <TableHead>{t("confusionTable.typed")}</TableHead>
           <SortableHeader
-            label="Times"
+            label={t("confusionTable.times")}
             sortKey="count"
             sort={sort}
             onSort={onSort}
             className="text-end"
           />
           <SortableHeader
-            label="% of errors"
+            label={t("confusionTable.share")}
             sortKey="share"
             sort={sort}
             onSort={onSort}

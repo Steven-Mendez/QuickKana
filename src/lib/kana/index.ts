@@ -35,10 +35,11 @@ export const ROMAJI_INDEX: Map<string, Array<Kana>> = (() => {
   return index
 })()
 
-export const CATEGORIES: Array<{ id: KanaCategory; label: string }> = [
-  { id: "gojuon", label: "Basics" },
-  { id: "dakuten", label: "Dakuten" },
-  { id: "digraph", label: "Digraphs" },
+// Labels live in the i18n catalog: render sites call t(`kana.category.${id}`).
+export const CATEGORY_IDS: Array<KanaCategory> = [
+  "gojuon",
+  "dakuten",
+  "digraph",
 ]
 
 export const SCRIPT_LABELS: Record<Script, string> = {

@@ -22,6 +22,7 @@ const newSession = (): SessionState => ({
   lessonStreak: 0,
   graduated: [],
   unlocked: [],
+  newRecord: false,
   ended: false,
 })
 

@@ -2,13 +2,18 @@ import { useEffect, useState } from "react"
 import { Link, createFileRoute } from "@tanstack/react-router"
 import { ArrowRight, Flag, PartyPopper } from "lucide-react"
 import { useSelector } from "@tanstack/react-store"
+import { AnimatePresence, motion } from "motion/react"
+import { useTranslation } from "react-i18next"
+import { useReward } from "react-rewards"
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import { DrillCard } from "@/components/drill-card"
 import { SessionSummary } from "@/components/session-summary"
 import { useDrill } from "@/hooks/use-drill"
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
 import { lessonAt, lessonById } from "@/lib/journey"
 import { lessonOf, progressionStore } from "@/stores/progression.store"
+import { preloadEffects } from "@/lib/sound"
 import { formatPercent } from "@/lib/stats"
 import { cn } from "@/lib/utils"
 
@@ -34,10 +39,17 @@ function Practice() {
     finish,
     restart,
   } = useDrill()
+  const { t } = useTranslation()
   const recordStreak = useSelector(
     progressionStore,
     (s) => s.records.bestSessionStreak
   )
+
+  // The user clicked their way here, so the AudioContext can unlock and the
+  // clips can be fetched before the first answer needs one.
+  useEffect(() => {
+    preloadEffects()
+  }, [])
 
   // Esc ends the session from anywhere, including while the input has focus.
   useEffect(() => {
@@ -51,19 +63,15 @@ function Practice() {
   if (pool.length === 0) {
     return (
       <main className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-24 text-center">
-        <h1 className="text-xl font-semibold">No characters selected</h1>
+        <h1 className="text-xl font-semibold">{t("practice.emptyTitle")}</h1>
         <p className="text-sm text-muted-foreground">
-          Pick at least one to get started practicing.
+          {t("practice.emptyBody")}
         </p>
         <Link to="/" className={buttonVariants()}>
-          Go to selector
+          {t("practice.emptyCta")}
         </Link>
       </main>
     )
-  }
-
-  if (session.ended) {
-    return <SessionSummary session={session} onRestart={restart} />
   }
 
   const justUnlocked = session.unlocked[session.unlocked.length - 1]
@@ -78,63 +86,91 @@ function Practice() {
   const accuracy = session.attempts > 0 ? session.correct / session.attempts : 0
 
   return (
-    <main className={cn("flex flex-col px-4", FULL_HEIGHT)}>
-      {justUnlocked !== undefined && (
-        <UnlockBanner key={justUnlocked} lessonId={justUnlocked} />
-      )}
-
-      {kana ? (
-        <DrillCard
-          kana={kana}
-          session={session}
-          settings={settings}
-          activeGroup={activeGroup}
-          limitMs={limitMs}
-          recordStreak={recordStreak}
-          pushingPace={pushingPace}
-          onInput={setInput}
-          onSubmit={submit}
-        />
+    <AnimatePresence mode="wait" initial={false}>
+      {session.ended ? (
+        <motion.div
+          key="summary"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <SessionSummary session={session} onRestart={restart} />
+        </motion.div>
       ) : (
-        <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-          Loading…
-        </div>
-      )}
-
-      {/* Everything that is not the drill lives down here, out of the way. */}
-      <footer className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-x-6 gap-y-2 py-5 text-xs text-muted-foreground">
-        <div className="flex items-center gap-4 tabular-nums">
-          <Metric
-            label="Correct"
-            value={`${session.correct}/${session.attempts}`}
-          />
-          <Metric
-            label="Accuracy"
-            value={session.attempts > 0 ? formatPercent(accuracy) : "—"}
-          />
-          <Metric label="Best streak" value={String(session.bestStreak)} />
-          {focusLesson && (
-            <Metric label="Learning" value={focusLesson.label} highlight />
+        <motion.main
+          key="drill"
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className={cn("flex flex-col px-4", FULL_HEIGHT)}
+        >
+          {justUnlocked !== undefined && (
+            <UnlockBanner key={justUnlocked} lessonId={justUnlocked} />
           )}
-        </div>
 
-        <div className="hidden lg:block">
-          <kbd className="rounded border px-1 py-0.5">Enter</kbd> confirm ·{" "}
-          <kbd className="rounded border px-1 py-0.5">Esc</kbd> end
-        </div>
+          {kana ? (
+            <DrillCard
+              kana={kana}
+              session={session}
+              settings={settings}
+              activeGroup={activeGroup}
+              limitMs={limitMs}
+              recordStreak={recordStreak}
+              pushingPace={pushingPace}
+              onInput={setInput}
+              onSubmit={submit}
+            />
+          ) : (
+            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+              {t("common.loading")}
+            </div>
+          )}
 
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={skip}>
-            Skip
-            <ArrowRight className="size-3.5" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={finish}>
-            <Flag className="size-3.5" />
-            Finish
-          </Button>
-        </div>
-      </footer>
-    </main>
+          {/* Everything that is not the drill lives down here, out of the way. */}
+          <footer className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-x-6 gap-y-2 py-5 text-xs text-muted-foreground">
+            <div className="flex items-center gap-4 tabular-nums">
+              <Metric
+                label={t("practice.correct")}
+                value={`${session.correct}/${session.attempts}`}
+              />
+              <Metric
+                label={t("practice.accuracy")}
+                value={session.attempts > 0 ? formatPercent(accuracy) : "—"}
+              />
+              <Metric
+                label={t("practice.bestStreak")}
+                value={String(session.bestStreak)}
+              />
+              {focusLesson && (
+                <Metric
+                  label={t("practice.learning")}
+                  value={focusLesson.label}
+                  highlight
+                />
+              )}
+            </div>
+
+            <div className="hidden lg:block">
+              <kbd className="rounded border px-1 py-0.5">Enter</kbd>{" "}
+              {t("practice.confirm")} ·{" "}
+              <kbd className="rounded border px-1 py-0.5">Esc</kbd>{" "}
+              {t("practice.end")}
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={skip}>
+                {t("practice.skip")}
+                <ArrowRight className="size-3.5" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={finish}>
+                <Flag className="size-3.5" />
+                {t("practice.finish")}
+              </Button>
+            </div>
+          </footer>
+        </motion.main>
+      )}
+    </AnimatePresence>
   )
 }
 
@@ -144,23 +180,44 @@ function Practice() {
  * the end anyway.
  */
 function UnlockBanner({ lessonId }: { lessonId: string }) {
+  const { t } = useTranslation()
   const [visible, setVisible] = useState(true)
+  const reducedMotion = usePrefersReducedMotion()
+  // react-rewards ignores prefers-reduced-motion, hence the manual gate below.
+  const { reward } = useReward("reward-unlock", "confetti", {
+    spread: 70,
+    elementCount: 60,
+    lifetime: 120,
+  })
 
   useEffect(() => {
+    if (!reducedMotion) reward()
     const id = setTimeout(() => setVisible(false), 4000)
     return () => clearTimeout(id)
+    // Mount-only on purpose: the banner is keyed by lesson, one burst each.
   }, [])
 
   const next = lessonById(lessonId)
-  if (!visible || !next) return null
+  if (!next) return null
 
   return (
     <div className="pointer-events-none fixed inset-x-0 top-16 z-20 flex justify-center px-4">
-      <div className="flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-1.5 text-sm text-emerald-600 shadow-sm backdrop-blur dark:text-emerald-400">
-        <PartyPopper className="size-4" />
-        Lesson {next.index + 1} unlocked ·{" "}
-        <span className="font-jp">{next.chars.join(" ")}</span>
-      </div>
+      <AnimatePresence>
+        {visible && (
+          <motion.div
+            initial={{ y: -16, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -8, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            className="flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-1.5 text-sm text-emerald-600 shadow-sm backdrop-blur dark:text-emerald-400"
+          >
+            <span id="reward-unlock" aria-hidden />
+            <PartyPopper className="size-4" />
+            {t("practice.unlockBanner", { number: next.index + 1 })}{" "}
+            <span className="font-jp">{next.chars.join(" ")}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { useTranslation } from "react-i18next"
 import {
   Table,
   TableBody,
@@ -16,6 +17,7 @@ import type { CharRow } from "@/lib/stats"
 type Key = "accuracy" | "attempts" | "avgMs" | "romaji"
 
 export function CharStatsTable({ rows }: { rows: Array<CharRow> }) {
+  const { t } = useTranslation()
   const [sort, setSort] = useState<SortState<Key>>({
     key: "accuracy",
     direction: "asc",
@@ -36,7 +38,7 @@ export function CharStatsTable({ rows }: { rows: Array<CharRow> }) {
   if (rows.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        Practice for a while and you'll see per-character detail here.
+        {t("charTable.empty")}
       </p>
     )
   }
@@ -48,33 +50,33 @@ export function CharStatsTable({ rows }: { rows: Array<CharRow> }) {
       <TableHeader>
         <TableRow>
           <SortableHeader
-            label="Character"
+            label={t("charTable.character")}
             sortKey="romaji"
             sort={sort}
             onSort={onSort}
           />
           <SortableHeader
-            label="Accuracy"
+            label={t("charTable.accuracy")}
             sortKey="accuracy"
             sort={sort}
             onSort={onSort}
             className="text-end"
           />
           <SortableHeader
-            label="Attempts"
+            label={t("charTable.attempts")}
             sortKey="attempts"
             sort={sort}
             onSort={onSort}
             className="text-end"
           />
           <SortableHeader
-            label="Time"
+            label={t("charTable.time")}
             sortKey="avgMs"
             sort={sort}
             onSort={onSort}
             className="text-end"
           />
-          <TableHead>Confused with</TableHead>
+          <TableHead>{t("charTable.confusedWith")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -111,7 +113,7 @@ export function CharStatsTable({ rows }: { rows: Array<CharRow> }) {
                   <span className="text-xs text-muted-foreground tabular-nums">
                     ×{row.topConfusion.count}
                     {row.confusionTotal > row.topConfusion.count &&
-                      ` of ${row.confusionTotal}`}
+                      ` ${t("charTable.ofTotal", { total: row.confusionTotal })}`}
                   </span>
                 </span>
               ) : (

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,6 +19,7 @@ import { resetSelection } from "@/stores/selection.store"
 import { resetSettings } from "@/stores/settings.store"
 
 export function ResetDialog() {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
 
   const reset = () => {
@@ -38,23 +40,21 @@ export function ResetDialog() {
         render={
           <Button variant="destructive">
             <Trash2 className="size-4" />
-            Reset all progress
+            {t("reset.trigger")}
           </Button>
         }
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Reset all progress?</DialogTitle>
-          <DialogDescription>
-            Clears attempt history, per-character stats, confusion matrix,
-            active groups, journey, and streaks. Preferences and selection
-            return to defaults. Cannot be undone.
-          </DialogDescription>
+          <DialogTitle>{t("reset.title")}</DialogTitle>
+          <DialogDescription>{t("reset.desc")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <DialogClose render={<Button variant="outline">Cancel</Button>} />
+          <DialogClose
+            render={<Button variant="outline">{t("reset.cancel")}</Button>}
+          />
           <Button variant="destructive" onClick={reset}>
-            Yes, reset all
+            {t("reset.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

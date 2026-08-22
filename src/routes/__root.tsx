@@ -7,20 +7,27 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 
+import { useTranslation } from "react-i18next"
+
 import { AppNav } from "@/components/app-nav"
+import { Providers } from "@/components/providers"
+import { useLanguage } from "@/hooks/use-language"
 import appCss from "../styles.css?url"
 
 /**
- * Runs before React paints so a dark-mode user never sees a white flash. Kept
- * inline and dependency-free on purpose — it has to be the first thing to run.
+ * Runs before React paints so a dark-mode user never sees a white flash, and
+ * sets <html lang> from the mirrored language the same way. Kept inline and
+ * dependency-free on purpose — it has to be the first thing to run.
  */
-const THEME_SCRIPT = `
+const BOOT_SCRIPT = `
 (function () {
   try {
     var pref = JSON.parse(localStorage.getItem("qk:theme") || '"system"');
     var dark = pref === "dark" || (pref === "system" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches);
     if (dark) document.documentElement.classList.add("dark");
+    var lang = JSON.parse(localStorage.getItem("qk:language") || "null");
+    if (lang === "en" || lang === "es") document.documentElement.lang = lang;
   } catch (e) {}
 })();
 `
@@ -54,27 +61,39 @@ export const Route = createRootRoute({
       { rel: "manifest", href: "/manifest.json" },
     ],
   }),
-  notFoundComponent: () => (
-    <main className="container mx-auto p-6 pt-16">
-      <h1 className="text-2xl font-semibold">404</h1>
-      <p className="text-muted-foreground">This page does not exist.</p>
-    </main>
-  ),
+  notFoundComponent: NotFound,
   shellComponent: RootDocument,
-  component: () => (
-    <>
+  component: RootComponent,
+})
+
+function RootComponent() {
+  // Mounted here so the language side effects run on every route.
+  useLanguage()
+
+  return (
+    <Providers>
       <AppNav />
       <Outlet />
-    </>
-  ),
-})
+    </Providers>
+  )
+}
+
+function NotFound() {
+  const { t } = useTranslation()
+  return (
+    <main className="container mx-auto p-6 pt-16">
+      <h1 className="text-2xl font-semibold">{t("notFound.title")}</h1>
+      <p className="text-muted-foreground">{t("notFound.body")}</p>
+    </main>
+  )
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
       </head>
       <body className="min-h-svh bg-background text-foreground antialiased">
         {children}

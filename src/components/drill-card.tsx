@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import {
+  AnimatePresence,
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+} from "motion/react"
+import {
   Check,
   Flame,
   FastForward,
@@ -8,7 +15,9 @@ import {
   Trophy,
   X,
 } from "lucide-react"
+import { Trans, useTranslation } from "react-i18next"
 import { Input } from "@/components/ui/input"
+import { NumberTicker } from "@/components/ui/number-ticker"
 import { displayPair } from "@/lib/kana"
 import { milestoneAt, streakTier } from "@/lib/pressure"
 import { cn } from "@/lib/utils"
@@ -45,6 +54,7 @@ export function DrillCard({
   onInput,
   onSubmit,
 }: DrillCardProps) {
+  const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Refocus on every new character: the drill is keyboard-only, so the caret
@@ -78,16 +88,29 @@ export function DrillCard({
         )}
       </div>
 
-      <div
-        className={cn(
-          "kana-display font-jp text-[7rem] leading-none transition-colors duration-200 sm:text-[10rem]",
-          isCorrect && "text-emerald-600 dark:text-emerald-400",
-          isRetry && "text-destructive"
-        )}
-        lang="ja"
-      >
-        {kana.char}
-      </div>
+      {/* popLayout: the entering character never waits for the old one's exit,
+          so the 320ms advance window stays untouched. */}
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div
+          key={`${session.current?.id}-${session.shownAt}`}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            scale: isCorrect ? [1, 1.05, 1] : 1,
+          }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.12, scale: { duration: 0.18 } }}
+          className={cn(
+            "kana-display font-jp text-[7rem] leading-none transition-colors duration-200 sm:text-[10rem]",
+            isCorrect && "text-emerald-600 dark:text-emerald-400",
+            isRetry && "text-destructive"
+          )}
+          lang="ja"
+        >
+          {kana.char}
+        </motion.div>
+      </AnimatePresence>
 
       <div className="flex w-full max-w-[15rem] flex-col items-center gap-3">
         {/* Fixed slot: the countdown vanishing on a miss must not shove the
@@ -103,33 +126,43 @@ export function DrillCard({
           </div>
         )}
 
-        <Input
-          ref={inputRef}
-          value={session.input}
-          onChange={(event) => onInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault()
-              onSubmit()
+        {/* The Input itself stays out of any keyed/remounting subtree so focus
+            and typing survive every animation around it. */}
+        <motion.div
+          className="w-full"
+          animate={isRetry ? { x: [0, -4, 4, -2, 0] } : { x: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <Input
+            ref={inputRef}
+            value={session.input}
+            onChange={(event) => onInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault()
+                onSubmit()
+              }
+            }}
+            readOnly={isCorrect}
+            placeholder={
+              session.introducing ? kana.romaji : t("drill.placeholder")
             }
-          }}
-          readOnly={isCorrect}
-          placeholder={session.introducing ? kana.romaji : "rōmaji"}
-          autoComplete="off"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          aria-label={`Rōmaji for ${kana.char}`}
-          className={cn(
-            "h-12 border-0 border-b-2 bg-transparent text-center text-xl tracking-wide shadow-none dark:bg-transparent",
-            "rounded-none focus-visible:ring-0",
-            isCorrect
-              ? "border-b-emerald-500 text-emerald-600 dark:text-emerald-400"
-              : isRetry
-                ? "border-b-destructive text-destructive"
-                : "border-b-border focus-visible:border-b-primary"
-          )}
-        />
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-label={t("drill.ariaRomajiFor", { char: kana.char })}
+            className={cn(
+              "h-12 border-0 border-b-2 bg-transparent text-center text-xl tracking-wide shadow-none dark:bg-transparent",
+              "rounded-none focus-visible:ring-0",
+              isCorrect
+                ? "border-b-emerald-500 text-emerald-600 dark:text-emerald-400"
+                : isRetry
+                  ? "border-b-destructive text-destructive"
+                  : "border-b-border focus-visible:border-b-primary"
+            )}
+          />
+        </motion.div>
 
         {/* Reserved height: the answer must not jump when feedback appears. */}
         <div className="h-5 text-sm">
@@ -144,15 +177,24 @@ export function DrillCard({
               {session.timedOut ? (
                 <>
                   <TimerOff className="size-4" />
-                  Time's up —{" "}
-                  <strong className="font-semibold">{kana.romaji}</strong>
+                  <Trans
+                    i18nKey="drill.timeUp"
+                    values={{ romaji: kana.romaji }}
+                    components={{
+                      bold: <strong className="font-semibold" />,
+                    }}
+                  />
                 </>
               ) : (
                 <>
                   <X className="size-4" />
-                  It was{" "}
-                  <strong className="font-semibold">{kana.romaji}</strong> —
-                  type it to continue
+                  <Trans
+                    i18nKey="drill.itWas"
+                    values={{ romaji: kana.romaji }}
+                    components={{
+                      bold: <strong className="font-semibold" />,
+                    }}
+                  />
                 </>
               )}
             </span>
@@ -213,9 +255,20 @@ function Countdown({ limitMs }: { limitMs: number }) {
  * a number that never changes shape is a number you stop looking at.
  */
 function StreakCounter({ streak, record }: { streak: number; record: number }) {
+  const { t } = useTranslation()
   const tier = streakTier(streak)
   const milestone = milestoneAt(streak)
   const isRecord = streak > record && streak >= 5
+  const reducedMotion = useReducedMotion()
+  const scale = useMotionValue(1)
+
+  // Imperative pulse: a keyed remount would reset the NumberTicker's roll,
+  // and MotionConfig does not cover hand-driven motion values — hence the gate.
+  useEffect(() => {
+    if (streak < 2 || reducedMotion) return
+    const pulse = animate(scale, [1, 1.12, 1], { duration: 0.25 })
+    return () => pulse.stop()
+  }, [streak, reducedMotion, scale])
 
   if (streak < 2) {
     return <div className="absolute end-0 top-0 h-8" aria-hidden />
@@ -223,35 +276,39 @@ function StreakCounter({ streak, record }: { streak: number; record: number }) {
 
   return (
     <div className="absolute end-0 top-2 flex flex-col items-end gap-1">
-      <div
-        key={tier}
+      <motion.div
+        style={{ scale }}
         className={cn(
-          "flex items-center gap-1.5 rounded-full px-2.5 py-1 tabular-nums transition-colors",
-          tier === 0 && "text-muted-foreground",
+          "flex items-center gap-1.5 rounded-full px-3 py-1.5 tabular-nums transition-colors",
+          tier === 0 && "bg-muted/60 text-muted-foreground",
           tier === 1 && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
           tier >= 2 && "bg-orange-500/15 text-orange-600 dark:text-orange-400"
         )}
-        title={`${streak} correct in a row${
-          record > 0 ? ` · your record is ${record}` : ""
+        title={`${t("drill.streakTitle", { count: streak })}${
+          record > 0 ? t("drill.recordSuffix", { record }) : ""
         }`}
       >
-        <Flame className={cn("size-4", tier >= 2 && "animate-pulse")} />
-        <span
-          className={cn("font-semibold", tier >= 2 ? "text-lg" : "text-sm")}
-        >
-          {streak}
-        </span>
-      </div>
+        <Flame
+          className={cn(
+            "size-4.5",
+            tier >= 2 && "animate-pulse motion-reduce:animate-none"
+          )}
+        />
+        <NumberTicker
+          value={streak}
+          className={cn("font-semibold", tier >= 2 ? "text-xl" : "text-base")}
+        />
+      </motion.div>
 
       {isRecord && (
         <span className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
           <Trophy className="size-3" />
-          record
+          {t("drill.record")}
         </span>
       )}
       {milestone !== null && !isRecord && (
         <span className="text-[11px] text-muted-foreground">
-          {milestone} in a row!
+          {t("drill.inARow", { count: milestone })}
         </span>
       )}
     </div>
@@ -265,16 +322,17 @@ function StreakCounter({ streak, record }: { streak: number; record: number }) {
  * correct answer.
  */
 function NewCharacterHint({ romaji }: { romaji: string }) {
+  const { t } = useTranslation()
   return (
     <p className="flex items-baseline gap-2.5 text-sm text-muted-foreground">
       <span className="text-[10px] font-medium tracking-[0.18em] uppercase">
-        New character
+        {t("drill.newCharacter")}
       </span>
       <span aria-hidden className="text-border">
         /
       </span>
       <span>
-        reads as{" "}
+        {t("drill.readsAs")}{" "}
         <strong className="font-semibold text-foreground">{romaji}</strong>
       </span>
     </p>
@@ -287,16 +345,17 @@ function NewCharacterHint({ romaji }: { romaji: string }) {
  * the app randomly getting harder right when the user was doing well.
  */
 function PaceHint() {
+  const { t } = useTranslation()
   return (
     <p className="flex items-baseline gap-2.5 text-sm text-muted-foreground">
       <FastForward className="size-3.5 self-center" />
       <span className="text-[10px] font-medium tracking-[0.18em] uppercase">
-        Picking up the pace
+        {t("drill.paceTitle")}
       </span>
       <span aria-hidden className="text-border">
         /
       </span>
-      <span>more new characters</span>
+      <span>{t("drill.paceMore")}</span>
     </p>
   )
 }
@@ -312,13 +371,17 @@ function GroupHint({
   group: ConfusionGroup
   graduationStreak: number
 }) {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs text-primary">
       <Target className="size-3.5" />
       <span className="font-jp text-sm">{displayPair(group.members)}</span>
       <span
         className="flex gap-1"
-        title={`${group.streak}/${graduationStreak} correct answers to master it`}
+        title={t("drill.groupTitle", {
+          streak: group.streak,
+          total: graduationStreak,
+        })}
       >
         {Array.from({ length: graduationStreak }, (_, index) => (
           <span

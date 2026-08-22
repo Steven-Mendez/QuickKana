@@ -4,8 +4,9 @@ import { getKana, requireKana, resolveTyped } from "@/lib/kana"
 import { isCorrect } from "@/lib/kana/romaji"
 import { lessonAt, lessonPhase, poolUpTo } from "@/lib/journey"
 import { guidedPool } from "@/lib/drill-pool"
-import { timeLimitFor } from "@/lib/pressure"
+import { milestoneAt, timeLimitFor } from "@/lib/pressure"
 import { isPushingPace } from "@/lib/momentum"
+import { playEffect } from "@/lib/sound"
 import { nextKana } from "@/lib/scheduler"
 import {
   advanceLesson,
@@ -240,6 +241,13 @@ export function useDrill() {
       }
     })
 
+    // One sound per answer, rarest event first — never two cues stacked.
+    if (unlocked !== null) playEffect("unlock")
+    else if (graduated.length > 0) playEffect("graduation")
+    else if (correct && milestoneAt(state.streak + 1) !== null)
+      playEffect("streakMilestone")
+    else playEffect(correct ? "correct" : "wrong")
+
     if (correct) {
       // Brief pause so the green state is visible before the next prompt.
       setTimeout(advance, 320)
@@ -285,6 +293,8 @@ export function useDrill() {
       input: "",
       timedOut: true,
     }))
+
+    playEffect("timeout")
   }, [])
 
   // The authoritative clock. The countdown the user sees ticks separately so a
@@ -329,8 +339,17 @@ export function useDrill() {
   }, [advance])
 
   const finish = useCallback(() => {
+    // Judged before recordSessionResult raises the bar. The ≥5 floor mirrors
+    // the drill's record badge: beating a zero record is not an achievement.
+    const { bestStreak } = sessionStore.state
+    const newRecord =
+      bestStreak >= 5 &&
+      bestStreak > progressionStore.state.records.bestSessionStreak
+    sessionStore.setState((prev) => ({ ...prev, newRecord }))
+
     recordSessionResult(sessionStore.state)
     endSession()
+    playEffect("sessionEnd")
   }, [])
 
   const restart = useCallback(() => {

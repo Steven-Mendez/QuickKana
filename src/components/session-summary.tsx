@@ -1,5 +1,8 @@
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { Link } from "@tanstack/react-router"
+import { motion } from "motion/react"
+import { useTranslation } from "react-i18next"
+import { useReward } from "react-rewards"
 import {
   Flame,
   GraduationCap,
@@ -11,10 +14,12 @@ import { useSelector } from "@tanstack/react-store"
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { NumberTicker } from "@/components/ui/number-ticker"
 import { Separator } from "@/components/ui/separator"
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
 import { lessonById } from "@/lib/journey"
 import { SCRIPT_LABELS, displayPair, getKana } from "@/lib/kana"
-import { formatDuration, formatPercent } from "@/lib/stats"
+import { formatDuration } from "@/lib/stats"
 import { historyStore, progressStore } from "@/stores/progress.store"
 import { progressionStore } from "@/stores/progression.store"
 import { cn } from "@/lib/utils"
@@ -26,6 +31,7 @@ interface SessionSummaryProps {
 }
 
 export function SessionSummary({ session, onRestart }: SessionSummaryProps) {
+  const { t } = useTranslation()
   const progression = useSelector(progressionStore, (s) => s)
   const accuracy = session.attempts > 0 ? session.correct / session.attempts : 0
 
@@ -58,14 +64,26 @@ export function SessionSummary({ session, onRestart }: SessionSummaryProps) {
 
   const elapsed = Date.now() - session.startedAt
   const avgMs = session.attempts > 0 ? elapsed / session.attempts : 0
-  const isRecordStreak =
-    session.bestStreak > 0 &&
-    session.bestStreak >= progression.records.bestSessionStreak
+
+  const reducedMotion = usePrefersReducedMotion()
+  // react-rewards ignores prefers-reduced-motion, hence the manual gate.
+  const { reward } = useReward("reward-summary", "confetti", {
+    spread: 70,
+    elementCount: 80,
+    lifetime: 160,
+  })
+  const celebrate = session.newRecord || session.unlocked.length > 0
+
+  useEffect(() => {
+    if (celebrate && !reducedMotion) reward()
+    // Mount-only: one burst per summary, not one per re-render.
+  }, [])
 
   return (
     <main className="mx-auto max-w-2xl space-y-8 px-4 py-12">
       <header className="text-center">
-        <p className="text-sm text-muted-foreground">Session complete</p>
+        <p className="text-sm text-muted-foreground">{t("summary.complete")}</p>
+        <span id="reward-summary" aria-hidden className="block" />
         <p
           className={cn(
             "mt-1 text-6xl font-semibold tabular-nums",
@@ -76,36 +94,50 @@ export function SessionSummary({ session, onRestart }: SessionSummaryProps) {
                 : undefined
           )}
         >
-          {session.attempts > 0 ? formatPercent(accuracy) : "—"}
+          {session.attempts > 0 ? (
+            <>
+              <NumberTicker value={Math.round(accuracy * 100)} />%
+            </>
+          ) : (
+            "—"
+          )}
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          {session.correct} of {session.attempts} characters in{" "}
-          {formatDuration(elapsed)}
+          {t("summary.ofIn", {
+            correct: session.correct,
+            attempts: session.attempts,
+            duration: formatDuration(elapsed),
+          })}
         </p>
       </header>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Figure label="Attempts" value={String(session.attempts)} />
-        <Figure
-          label="Best streak"
-          value={String(session.bestStreak)}
-          badge={isRecordStreak ? "record" : undefined}
-        />
-        <Figure label="Per character" value={formatDuration(avgMs)} />
-        <Figure
-          label="Day streak"
-          value={String(progression.day.streak)}
-          icon={<Flame className="size-3" />}
-        />
-      </div>
+      <Reveal delay={0.05}>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Figure
+            label={t("summary.attempts")}
+            value={<NumberTicker value={session.attempts} />}
+          />
+          <Figure
+            label={t("summary.bestStreak")}
+            value={<NumberTicker value={session.bestStreak} />}
+            badge={session.newRecord ? t("summary.record") : undefined}
+          />
+          <Figure label={t("summary.perChar")} value={formatDuration(avgMs)} />
+          <Figure
+            label={t("summary.dayStreak")}
+            value={String(progression.day.streak)}
+            icon={<Flame className="size-3" />}
+          />
+        </div>
+      </Reveal>
 
       {unlocked.length > 0 && (
-        <>
+        <Reveal delay={0.12}>
           <Separator />
-          <section className="space-y-2">
+          <section className="mt-8 space-y-2">
             <h3 className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
               <PartyPopper className="size-4" />
-              {unlocked.length === 1 ? "Lesson unlocked" : "Lessons unlocked"}
+              {t("summary.unlockedTitle", { count: unlocked.length })}
             </h3>
             <div className="flex flex-wrap gap-2">
               {unlocked.map((lesson) => (
@@ -123,16 +155,16 @@ export function SessionSummary({ session, onRestart }: SessionSummaryProps) {
               ))}
             </div>
           </section>
-        </>
+        </Reveal>
       )}
 
       {graduated.length > 0 && (
-        <>
+        <Reveal delay={0.18}>
           <Separator />
-          <section className="space-y-2">
+          <section className="mt-8 space-y-2">
             <h3 className="flex items-center gap-1.5 text-sm font-medium">
               <GraduationCap className="size-4" />
-              Confusion groups mastered
+              {t("summary.graduatedTitle")}
             </h3>
             <div className="flex flex-wrap gap-2">
               {graduated.map((group) => (
@@ -142,14 +174,14 @@ export function SessionSummary({ session, onRestart }: SessionSummaryProps) {
               ))}
             </div>
           </section>
-        </>
+        </Reveal>
       )}
 
       {misses.length > 0 && (
-        <>
+        <Reveal delay={0.24}>
           <Separator />
-          <section className="space-y-2">
-            <h3 className="text-sm font-medium">Hardest characters</h3>
+          <section className="mt-8 space-y-2">
+            <h3 className="text-sm font-medium">{t("summary.hardest")}</h3>
             <div className="flex flex-wrap gap-2">
               {misses.map(([id, count]) => {
                 const kana = getKana(id)
@@ -164,24 +196,43 @@ export function SessionSummary({ session, onRestart }: SessionSummaryProps) {
               })}
             </div>
           </section>
-        </>
+        </Reveal>
       )}
 
       <div className="flex flex-wrap justify-center gap-2 pt-2">
         <Button onClick={onRestart}>
           <RotateCcw className="size-4" />
-          Another session
+          {t("summary.again")}
         </Button>
         <Link to="/stats" className={buttonVariants({ variant: "outline" })}>
-          View stats
+          {t("summary.viewStats")}
         </Link>
         <Link to="/" className={buttonVariants({ variant: "ghost" })}>
           {progression.mode === "journey"
-            ? "View my journey"
-            : "Change selection"}
+            ? t("summary.viewJourney")
+            : t("summary.changeSelection")}
         </Link>
       </div>
     </main>
+  )
+}
+
+/** Fade-and-rise on mount; the parent staggers siblings via `delay`. */
+function Reveal({
+  delay,
+  children,
+}: {
+  delay: number
+  children: React.ReactNode
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay }}
+    >
+      {children}
+    </motion.div>
   )
 }
 
@@ -192,7 +243,7 @@ function Figure({
   icon,
 }: {
   label: string
-  value: string
+  value: React.ReactNode
   badge?: string
   icon?: React.ReactNode
 }) {

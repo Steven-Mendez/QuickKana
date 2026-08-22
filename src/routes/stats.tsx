@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import { useSelector } from "@tanstack/react-store"
+import { useTranslation } from "react-i18next"
 import { Flame, Trophy } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { NumberTicker } from "@/components/ui/number-ticker"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CharStatsTable } from "@/components/char-stats-table"
 import { ConfusionHeatmap } from "@/components/confusion-heatmap"
@@ -14,7 +16,6 @@ import { LESSON_MASTERY } from "@/lib/journey"
 import {
   charRows,
   confusionPairs,
-  formatPercent,
   heatmap,
   masteredCount,
   overallMastery,
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/stats")({ component: Stats })
 const HEATMAP_LIMIT = 15
 
 function Stats() {
+  const { t } = useTranslation()
   const progress = useSelector(progressStore, (s) => s)
   const settings = useSelector(settingsStore, (s) => s)
   const selection = useSelector(selectionStore, (s) => s)
@@ -64,36 +66,31 @@ function Stats() {
   return (
     <main className="mx-auto max-w-5xl space-y-8 px-4 py-8">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Stats</h1>
-        <p className="text-sm text-muted-foreground">
-          Which characters do you confuse with which, and how your targeted
-          practice is going.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t("stats.title")}
+        </h1>
+        <p className="text-sm text-muted-foreground">{t("stats.subtitle")}</p>
       </header>
 
       {/* One strip instead of a row of cards: these are reference numbers, and
           six bordered boxes made them look more important than the tables. */}
       <dl className="flex flex-wrap gap-x-8 gap-y-4 border-y py-4">
         <Figure
-          label="Mastery"
-          value={formatPercent(overallMastery(progress.charStats))}
-          hint={`${mastered} of ${TOTAL_KANA} characters mastered`}
+          label={t("stats.mastery")}
+          value={<Percent value={overallMastery(progress.charStats)} />}
+          hint={t("stats.masteredOf", { mastered, total: TOTAL_KANA })}
         />
         <Figure
-          label="Accuracy"
-          value={accuracy === null ? "—" : formatPercent(accuracy)}
-          hint={`${progress.totals.attempts} attempts`}
+          label={t("stats.accuracy")}
+          value={accuracy === null ? "—" : <Percent value={accuracy} />}
+          hint={t("stats.attemptsHint", { count: progress.totals.attempts })}
         />
         <Figure
-          label="Sessions"
-          value={String(progress.totals.sessions)}
+          label={t("stats.sessions")}
+          value={<NumberTicker value={progress.totals.sessions} />}
           hint={
             progression.day.streak > 0
-              ? `${progression.day.streak} ${
-                  progression.day.streak === 1
-                    ? "day in a row"
-                    : "days in a row"
-                }`
+              ? t("stats.daysInARow", { count: progression.day.streak })
               : undefined
           }
           icon={
@@ -103,31 +100,29 @@ function Stats() {
           }
         />
         <Figure
-          label="Best streak"
-          value={String(progression.records.bestSessionStreak)}
+          label={t("stats.bestStreak")}
+          value={<NumberTicker value={progression.records.bestSessionStreak} />}
           hint={
             progression.day.best > 0
-              ? `record of ${progression.day.best} ${
-                  progression.day.best === 1 ? "day" : "days"
-                }`
+              ? t("stats.recordDays", { count: progression.day.best })
               : undefined
           }
           icon={<Trophy className="size-3 text-amber-500" />}
         />
         <Figure
-          label="Confusions"
-          value={String(pairs.length)}
-          hint={`${activeCount} in targeted practice`}
+          label={t("stats.confusions")}
+          value={<NumberTicker value={pairs.length} />}
+          hint={t("stats.inTargeted", { count: activeCount })}
         />
       </dl>
 
       <Tabs defaultValue="mastery">
         <TabsList>
-          <TabsTrigger value="mastery">Mastery</TabsTrigger>
-          <TabsTrigger value="pairs">Pairs</TabsTrigger>
-          <TabsTrigger value="chars">Per character</TabsTrigger>
-          <TabsTrigger value="heatmap">Confusion matrix</TabsTrigger>
-          <TabsTrigger value="groups">Groups</TabsTrigger>
+          <TabsTrigger value="mastery">{t("stats.tabMastery")}</TabsTrigger>
+          <TabsTrigger value="pairs">{t("stats.tabPairs")}</TabsTrigger>
+          <TabsTrigger value="chars">{t("stats.tabChars")}</TabsTrigger>
+          <TabsTrigger value="heatmap">{t("stats.tabHeatmap")}</TabsTrigger>
+          <TabsTrigger value="groups">{t("stats.tabGroups")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="mastery" className="mt-6">
@@ -136,16 +131,16 @@ function Stats() {
 
         <TabsContent value="pairs" className="mt-6 space-y-3">
           <SectionHeader
-            title="Most confused pairs"
-            description="Sorted by frequency. Click headers to reorder."
+            title={t("stats.pairsTitle")}
+            description={t("stats.pairsDesc")}
           />
           <ConfusionTable pairs={pairs} />
         </TabsContent>
 
         <TabsContent value="chars" className="mt-6 space-y-3">
           <SectionHeader
-            title="Per-character detail"
-            description="Worst first. Only shows ones you've practiced."
+            title={t("stats.charsTitle")}
+            description={t("stats.charsDesc")}
           />
           <CharStatsTable rows={rows} />
         </TabsContent>
@@ -153,15 +148,15 @@ function Stats() {
         <TabsContent value="heatmap" className="mt-6 space-y-3">
           <div className="flex items-start justify-between gap-4">
             <SectionHeader
-              title="Confusion matrix"
-              description={`The ${HEATMAP_LIMIT} characters with the most errors.`}
+              title={t("stats.heatmapTitle")}
+              description={t("stats.heatmapDesc", { count: HEATMAP_LIMIT })}
             />
             <Button
               variant={onlySelected ? "default" : "outline"}
               size="sm"
               onClick={() => setOnlySelected((prev) => !prev)}
             >
-              My selection only
+              {t("stats.onlySelected")}
             </Button>
           </div>
           <ConfusionHeatmap data={grid} />
@@ -169,8 +164,11 @@ function Stats() {
 
         <TabsContent value="groups" className="mt-6 space-y-3">
           <SectionHeader
-            title="Confusion groups"
-            description={`They activate on their own when you mix up the same characters ${settings.activationThreshold} times, and they're mastered with ${settings.graduationStreak} correct answers in a row.`}
+            title={t("stats.groupsTitle")}
+            description={t("stats.groupsDesc", {
+              activation: settings.activationThreshold,
+              graduation: settings.graduationStreak,
+            })}
           />
           <GroupsPanel
             groups={groups}
@@ -197,6 +195,15 @@ function SectionHeader({
   )
 }
 
+/** A percentage KPI that counts up on entry. */
+function Percent({ value }: { value: number }) {
+  return (
+    <>
+      <NumberTicker value={Math.round(value * 100)} />%
+    </>
+  )
+}
+
 function Figure({
   label,
   value,
@@ -204,7 +211,7 @@ function Figure({
   icon,
 }: {
   label: string
-  value: string
+  value: React.ReactNode
   hint?: string
   icon?: React.ReactNode
 }) {

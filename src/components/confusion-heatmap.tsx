@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import type { Heatmap } from "@/lib/stats"
 
 /**
@@ -9,10 +10,11 @@ import type { Heatmap } from "@/lib/stats"
  * a 15×15 grid would otherwise mount 225 popup instances for a one-line label.
  */
 export function ConfusionHeatmap({ data }: { data: Heatmap }) {
+  const { t } = useTranslation()
   if (data.ids.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        No confusion records yet.
+        {t("heatmap.empty")}
       </p>
     )
   }
@@ -57,7 +59,11 @@ export function ConfusionHeatmap({ data }: { data: Heatmap }) {
                   title={
                     diagonal
                       ? data.chars[rowIndex]
-                      : `${data.chars[rowIndex]} read as ${data.chars[colIndex]}: ${count}`
+                      : t("heatmap.cellTitle", {
+                          shown: data.chars[rowIndex],
+                          typed: data.chars[colIndex],
+                          count,
+                        })
                   }
                   style={{
                     backgroundColor: diagonal
@@ -76,7 +82,7 @@ export function ConfusionHeatmap({ data }: { data: Heatmap }) {
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        Row = character shown · Column = what you typed.
+        {t("heatmap.legend")}
       </p>
     </div>
   )

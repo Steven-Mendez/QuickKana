@@ -1,14 +1,18 @@
 import { Link } from "@tanstack/react-router"
 import { BarChart3, Grid2x2, Settings as SettingsIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
+import { LanguageToggle } from "@/components/language-toggle"
+import { SoundToggle } from "@/components/sound-toggle"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 const LINKS = [
-  { to: "/", label: "Practice", icon: Grid2x2 },
-  { to: "/stats", label: "Stats", icon: BarChart3 },
-  { to: "/settings", label: "Settings", icon: SettingsIcon },
+  { to: "/", labelKey: "nav.practice", icon: Grid2x2 },
+  { to: "/stats", labelKey: "nav.stats", icon: BarChart3 },
+  { to: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
 ] as const
 
 export function AppNav() {
+  const { t } = useTranslation()
   return (
     <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
       <nav className="mx-auto flex h-14 max-w-5xl items-center gap-1 px-4">
@@ -26,18 +30,20 @@ export function AppNav() {
         </Link>
 
         <div className="flex flex-1 items-center gap-1">
-          {LINKS.map(({ to, label, icon: Icon }) => (
+          {LINKS.map(({ to, labelKey, icon: Icon }) => (
             <Link
               key={to}
               to={to}
               className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-accent data-[status=active]:text-foreground"
             >
               <Icon className="size-4" />
-              <span className="hidden sm:inline">{label}</span>
+              <span className="hidden sm:inline">{t(labelKey)}</span>
             </Link>
           ))}
         </div>
 
+        <LanguageToggle />
+        <SoundToggle />
         <ThemeToggle />
       </nav>
     </header>

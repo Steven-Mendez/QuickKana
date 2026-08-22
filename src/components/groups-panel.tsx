@@ -1,4 +1,5 @@
 import { GraduationCap, Target } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { displayPair } from "@/lib/kana"
@@ -10,14 +11,14 @@ interface GroupsPanelProps {
 }
 
 export function GroupsPanel({ groups, graduationStreak }: GroupsPanelProps) {
+  const { t } = useTranslation()
   const active = groups.filter((group) => group.status === "active")
   const graduated = groups.filter((group) => group.status === "graduated")
 
   if (groups.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
-        No confusion groups detected yet. They appear when you confuse two
-        characters with each other multiple times.
+        {t("groups.empty")}
       </p>
     )
   }
@@ -27,13 +28,13 @@ export function GroupsPanel({ groups, graduationStreak }: GroupsPanelProps) {
       <section className="space-y-3">
         <h3 className="flex items-center gap-1.5 text-sm font-medium">
           <Target className="size-4" />
-          In targeted practice
+          {t("groups.targeted")}
           <span className="text-muted-foreground">({active.length})</span>
         </h3>
 
         {active.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            None active right now.
+            {t("groups.noneActive")}
           </p>
         ) : (
           <ul className="space-y-3">
@@ -44,7 +45,10 @@ export function GroupsPanel({ groups, graduationStreak }: GroupsPanelProps) {
                     {displayPair(group.members)}
                   </span>
                   <span className="text-xs text-muted-foreground tabular-nums">
-                    {group.streak}/{graduationStreak} to master
+                    {t("groups.toMaster", {
+                      streak: group.streak,
+                      total: graduationStreak,
+                    })}
                   </span>
                 </div>
                 <Progress
@@ -52,9 +56,9 @@ export function GroupsPanel({ groups, graduationStreak }: GroupsPanelProps) {
                   className="h-1"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {group.totalMisses} mutual confusions
+                  {t("groups.misses", { count: group.totalMisses })}
                   {group.timesActivated > 1 &&
-                    ` · reactivated ${group.timesActivated} times`}
+                    t("groups.reactivated", { count: group.timesActivated })}
                 </p>
               </li>
             ))}
@@ -66,7 +70,7 @@ export function GroupsPanel({ groups, graduationStreak }: GroupsPanelProps) {
         <section className="space-y-3">
           <h3 className="flex items-center gap-1.5 text-sm font-medium">
             <GraduationCap className="size-4" />
-            Mastered
+            {t("groups.mastered")}
             <span className="text-muted-foreground">({graduated.length})</span>
           </h3>
           <div className="flex flex-wrap gap-2">

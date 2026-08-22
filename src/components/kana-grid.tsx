@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import { formatPercent, mastery } from "@/lib/stats"
 import { cn } from "@/lib/utils"
 import type { CharStat, Kana, KanaRow } from "@/lib/types"
@@ -74,6 +75,7 @@ function TableBlock({
   onToggle,
   onToggleMany,
 }: KanaGridProps) {
+  const { t } = useTranslation()
   const first = rows[0]
   if (!first) return null
 
@@ -97,7 +99,11 @@ function TableBlock({
               key={column}
               label={column}
               active={on}
-              title={on ? `Remove column ${column}` : `Add column ${column}`}
+              title={
+                on
+                  ? t("selector.removeColumn", { column })
+                  : t("selector.addColumn", { column })
+              }
               onClick={() =>
                 onToggleMany(
                   cells.map((cell) => cell.id),
@@ -124,7 +130,9 @@ function TableBlock({
                 label={row.shortLabel}
                 active={rowOn}
                 title={
-                  rowOn ? `Remove row ${row.label}` : `Add row ${row.label}`
+                  rowOn
+                    ? t("selector.removeRow", { label: row.label })
+                    : t("selector.addRow", { label: row.label })
                 }
                 onClick={() =>
                   onToggleMany(
@@ -169,6 +177,7 @@ function KanaCell({
   showMastery: boolean
   onToggle: (id: string) => void
 }) {
+  const { t } = useTranslation()
   const level = mastery(stat)
   const label =
     showMastery && level !== null ? formatPercent(level) : kana.romaji
@@ -179,12 +188,18 @@ function KanaCell({
       onClick={() => onToggle(kana.id)}
       aria-pressed={selected}
       aria-label={`${kana.char} — ${kana.romaji}${
-        level === null ? "" : `, ${formatPercent(level)} mastery`
+        level === null
+          ? ""
+          : t("selector.ariaMastery", { percent: formatPercent(level) })
       }`}
       title={
         level === null
-          ? `${kana.romaji} — not practiced`
-          : `${kana.romaji} — ${formatPercent(level)} mastery · ${stat?.attempts} attempts`
+          ? t("selector.cellNotPracticed", { romaji: kana.romaji })
+          : t("selector.cellMastery", {
+              romaji: kana.romaji,
+              percent: formatPercent(level),
+              attempts: stat?.attempts,
+            })
       }
       className={cn(
         "relative flex h-11 flex-col items-center justify-center overflow-hidden rounded-md border transition-colors",

@@ -1,10 +1,12 @@
 import { useMemo } from "react"
 import { Link, createFileRoute } from "@tanstack/react-router"
 import { useSelector } from "@tanstack/react-store"
+import { useTranslation } from "react-i18next"
 import { Flame, Play, Target, Trophy } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TourAutoLauncher } from "@/components/app-tour"
 import { JourneyPanel } from "@/components/journey-panel"
 import { KanaSelector } from "@/components/kana-selector"
 import { activeGroups } from "@/lib/confusion"
@@ -20,6 +22,7 @@ import type { PracticeMode } from "@/stores/progression.store"
 export const Route = createFileRoute("/")({ component: Home })
 
 function Home() {
+  const { t } = useTranslation()
   const selection = useSelector(selectionStore, (s) => s)
   const progress = useSelector(progressStore, (s) => s)
   const progression = useSelector(progressionStore, (s) => s)
@@ -42,14 +45,14 @@ function Home() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 pt-8 pb-28">
+      <TourAutoLauncher />
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Pick what to practice
+            {t("home.title")}
           </h1>
           <p className="max-w-lg text-sm text-muted-foreground">
-            You type the rōmaji of each character. Characters you mix up will
-            appear together until you tell them apart.
+            {t("home.subtitle")}
           </p>
         </div>
 
@@ -57,28 +60,28 @@ function Home() {
           {progression.day.streak > 0 && (
             <span
               className="flex items-center gap-1.5 rounded-full bg-orange-500/10 px-2.5 py-1 text-sm text-orange-600 dark:text-orange-400"
-              title={`Best streak: ${progression.day.best} days`}
+              title={t("home.bestDays", { count: progression.day.best })}
             >
               <Flame className="size-4" />
               <span className="font-medium tabular-nums">
                 {progression.day.streak}
               </span>
-              {progression.day.streak === 1 ? "day" : "days"}
+              {t("home.day", { count: progression.day.streak })}
             </span>
           )}
           {progress.totals.attempts > 0 && (
             <dl className="flex gap-5 text-sm">
               <Figure
-                label="Accuracy"
+                label={t("home.accuracy")}
                 value={accuracy === null ? "—" : formatPercent(accuracy)}
               />
               <Figure
-                label="Attempts"
+                label={t("home.attempts")}
                 value={String(progress.totals.attempts)}
               />
               {progression.records.bestSessionStreak > 0 && (
                 <Figure
-                  label="Best streak"
+                  label={t("home.bestStreak")}
                   value={String(progression.records.bestSessionStreak)}
                   icon={<Trophy className="size-3" />}
                 />
@@ -92,7 +95,7 @@ function Home() {
         <div className="mt-6 flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
           <span className="flex items-center gap-1.5 text-xs font-medium text-primary">
             <Target className="size-3.5" />
-            In targeted practice
+            {t("home.targeted")}
           </span>
           {groups.map((group) => (
             <span
@@ -106,7 +109,7 @@ function Home() {
             to="/stats"
             className="ms-auto text-xs text-muted-foreground underline-offset-2 hover:underline"
           >
-            View details
+            {t("home.viewDetails")}
           </Link>
         </div>
       )}
@@ -116,9 +119,9 @@ function Home() {
         onValueChange={(value) => setMode(value as PracticeMode)}
         className="mt-6"
       >
-        <TabsList>
-          <TabsTrigger value="journey">Journey</TabsTrigger>
-          <TabsTrigger value="free">Free selection</TabsTrigger>
+        <TabsList data-tour="mode-tabs">
+          <TabsTrigger value="journey">{t("home.tabJourney")}</TabsTrigger>
+          <TabsTrigger value="free">{t("home.tabFree")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="journey" className="mt-5">
@@ -133,30 +136,36 @@ function Home() {
       {/* Floating bar: the pool count and the way out are always reachable,
           however far down the tables the user has scrolled. */}
       <div className="pointer-events-none fixed inset-x-0 bottom-0 flex justify-center px-4 pb-5">
-        <div className="pointer-events-auto flex items-center gap-3 rounded-full border bg-background/90 py-1.5 ps-5 pe-1.5 shadow-lg backdrop-blur">
+        <div
+          data-tour="practice-cta"
+          className="pointer-events-auto flex items-center gap-3 rounded-full border bg-background/90 py-1.5 ps-5 pe-1.5 shadow-lg backdrop-blur"
+        >
           <span className="text-sm text-muted-foreground tabular-nums">
             {progression.mode === "journey" ? (
               <>
-                {SCRIPT_LABELS[track]} · lesson {lesson + 1}{" "}
+                {t("home.barLesson", {
+                  script: SCRIPT_LABELS[track],
+                  number: lesson + 1,
+                })}{" "}
                 <span className="font-jp">
                   {lessonAt(track, lesson).chars.join("")}
                 </span>
               </>
             ) : pool.length === 0 ? (
-              "No characters selected"
+              t("home.noneSelected")
             ) : (
               <>
                 <span className="font-medium text-foreground">
                   {pool.length}
                 </span>{" "}
-                characters
+                {t("home.character", { count: pool.length })}
               </>
             )}
           </span>
           {pool.length === 0 ? (
             <Button className="rounded-full" disabled>
               <Play className="size-4" />
-              Practice
+              {t("home.practice")}
             </Button>
           ) : (
             <Link
@@ -165,7 +174,7 @@ function Home() {
               className={buttonVariants({ className: "rounded-full" })}
             >
               <Play className="size-4" />
-              Practice
+              {t("home.practice")}
             </Link>
           )}
         </div>

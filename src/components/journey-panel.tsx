@@ -1,5 +1,7 @@
 import { useMemo } from "react"
 import { useSelector } from "@tanstack/react-store"
+import { AnimatePresence, motion } from "motion/react"
+import { useTranslation } from "react-i18next"
 import { Check, Lock } from "lucide-react"
 
 import { Progress } from "@/components/ui/progress"
@@ -33,6 +35,7 @@ import type { CharStat, Script } from "@/lib/types"
  * right now, and how far along am I.
  */
 export function JourneyPanel() {
+  const { t } = useTranslation()
   const progression = useSelector(progressionStore, (s) => s)
   const charStats = useSelector(progressStore, (s) => s.charStats)
 
@@ -69,13 +72,19 @@ export function JourneyPanel() {
         ))}
       </div>
 
-      <section className="rounded-xl border bg-card p-5">
+      <section
+        data-tour="current-lesson"
+        className="rounded-xl border bg-card p-5"
+      >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <p className="text-xs tracking-wide text-muted-foreground uppercase">
               {finished
-                ? `${SCRIPT_LABELS[track]} complete`
-                : `Lesson ${lesson + 1} of ${TRACKS[track].length}`}
+                ? t("journey.complete", { script: SCRIPT_LABELS[track] })
+                : t("journey.lessonOf", {
+                    number: lesson + 1,
+                    total: TRACKS[track].length,
+                  })}
             </p>
             <h2 className="mt-0.5 text-lg font-semibold">
               {SCRIPT_LABELS[track]} · {current.label}
@@ -85,7 +94,7 @@ export function JourneyPanel() {
             <span className="font-medium text-foreground">
               {progress.mastered.length}
             </span>
-            /{current.ids.length} mastered
+            /{current.ids.length} {t("journey.mastered")}
           </p>
         </div>
 
@@ -97,10 +106,10 @@ export function JourneyPanel() {
 
         <p className="mt-4 text-xs text-muted-foreground">
           {finished
-            ? "You've completed this syllabary. Reviews keep using your mistakes to pick what shows up."
+            ? t("journey.explainFinished")
             : lessonPhase(current, charStats) === "focus"
-              ? "First, learn these new characters on their own — reviews come back once you can read each one."
-              : "Master these characters and keep the earlier ones fresh, and the next lesson unlocks."}
+              ? t("journey.explainFocus")
+              : t("journey.explainMix")}
         </p>
       </section>
 
@@ -115,21 +124,26 @@ export function JourneyPanel() {
 
       <section className="space-y-2">
         <div className="flex items-baseline justify-between text-sm">
-          <h3 className="font-medium">Progress in {SCRIPT_LABELS[track]}</h3>
+          <h3 className="font-medium">
+            {t("journey.progressIn", { script: SCRIPT_LABELS[track] })}
+          </h3>
           <p className="text-muted-foreground tabular-nums">
-            {overall.mastered} of {overall.total} characters ·{" "}
-            {formatPercent(overall.mastered / overall.total)}
+            {t("journey.charsOf", {
+              mastered: overall.mastered,
+              total: overall.total,
+              percent: formatPercent(overall.mastered / overall.total),
+            })}
           </p>
         </div>
         <Progress value={(overall.mastered / overall.total) * 100} />
         <p className="text-xs text-muted-foreground">
-          {overall.unlocked} unlocked so far.
+          {t("journey.unlockedSoFar", { count: overall.unlocked })}
         </p>
       </section>
 
       <section className="space-y-2">
         <h3 className="text-xs tracking-wide text-muted-foreground uppercase">
-          Journey
+          {t("journey.stripTitle")}
         </h3>
         {/* Every lesson at a glance: done, current, still locked. */}
         <div className="flex flex-wrap gap-1">
@@ -137,29 +151,54 @@ export function JourneyPanel() {
             const done = item.index < lesson
             const isCurrent = item.index === lesson
             const ratio = lessonProgress(item, charStats).ratio
+            const state = done ? "done" : isCurrent ? "current" : "locked"
             return (
               <span
                 key={item.id}
-                title={`${item.label}${
+                title={
                   done || isCurrent
-                    ? ` — ${formatPercent(ratio)} mastered`
-                    : " — locked"
-                }`}
+                    ? t("journey.stripMastered", {
+                        label: item.label,
+                        percent: formatPercent(ratio),
+                      })
+                    : t("journey.stripLocked", { label: item.label })
+                }
                 className={cn(
-                  "flex h-7 min-w-7 items-center justify-center rounded px-1.5 text-[11px]",
+                  "relative flex h-7 min-w-7 items-center justify-center rounded px-1.5 text-[11px]",
                   isCurrent && "bg-primary text-primary-foreground",
                   done &&
                     "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
                   !done && !isCurrent && "bg-muted/40 text-muted-foreground/40"
                 )}
               >
-                {done ? (
-                  <Check className="size-3.5" />
-                ) : isCurrent ? (
-                  <span className="font-jp">{item.chars[0]}</span>
-                ) : (
-                  <Lock className="size-3" />
+                {/* A quiet "you are here": the strip shows twenty near-identical
+                    chips and the current one has to be findable at a glance. */}
+                {isCurrent && (
+                  <span
+                    aria-hidden
+                    className="absolute -inset-0.5 animate-pulse rounded-md ring-2 ring-primary/40 motion-reduce:animate-none"
+                  />
                 )}
+                {/* Keyed by state so the lock flips into the kana exactly when
+                    a lesson unlocks, and never on ordinary re-renders. */}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={state}
+                    initial={{ rotateY: 90, opacity: 0 }}
+                    animate={{ rotateY: 0, opacity: 1 }}
+                    exit={{ rotateY: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center justify-center"
+                  >
+                    {done ? (
+                      <Check className="size-3.5" />
+                    ) : isCurrent ? (
+                      <span className="font-jp">{item.chars[0]}</span>
+                    ) : (
+                      <Lock className="size-3" />
+                    )}
+                  </motion.span>
+                </AnimatePresence>
               </span>
             )
           })}
@@ -189,6 +228,7 @@ function RetentionSection({
   charStats: Record<string, CharStat>
   lessonDone: boolean
 }) {
+  const { t } = useTranslation()
   const value = useMemo(
     () => retention(track, lesson, charStats),
     [track, lesson, charStats]
@@ -198,7 +238,7 @@ function RetentionSection({
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-        <h3 className="font-medium">Earlier characters</h3>
+        <h3 className="font-medium">{t("journey.retentionTitle")}</h3>
         <p
           className={cn(
             "tabular-nums",
@@ -207,7 +247,10 @@ function RetentionSection({
               : "font-medium text-amber-600 dark:text-amber-400"
           )}
         >
-          {value.held} of {value.total} still solid
+          {t("journey.retentionSolid", {
+            held: value.held,
+            total: value.total,
+          })}
         </p>
       </div>
 
@@ -218,9 +261,10 @@ function RetentionSection({
           {value.slipped.slice(0, SLIPPED_SHOWN).map((id) => (
             <span
               key={id}
-              title={`${getKana(id)?.romaji} — ${formatPercent(
-                mastery(charStats[id]) ?? 0
-              )} mastery`}
+              title={t("journey.charTitle", {
+                romaji: getKana(id)?.romaji,
+                percent: formatPercent(mastery(charStats[id]) ?? 0),
+              })}
               className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-jp text-sm text-amber-600 dark:text-amber-400"
             >
               {getKana(id)?.char}
@@ -236,14 +280,12 @@ function RetentionSection({
 
       <p className="text-xs text-muted-foreground">
         {ok
-          ? `At least ${formatPercent(
-              RETENTION
-            )} of them have to hold up for the next lesson to unlock.`
+          ? t("journey.retentionOk", { percent: formatPercent(RETENTION) })
           : lessonDone
-            ? "The next lesson is waiting on these, so the drill is showing them first."
-            : `These have slipped below the bar. Bring them back to ${formatPercent(
-                RETENTION
-              )} and the next lesson can unlock.`}
+            ? t("journey.retentionWaiting")
+            : t("journey.retentionSlipped", {
+                percent: formatPercent(RETENTION),
+              })}
       </p>
     </section>
   )
@@ -262,6 +304,7 @@ function TrackButton({
   charStats: Record<string, CharStat>
   onSelect: () => void
 }) {
+  const { t } = useTranslation()
   const progress = trackProgress(script, lesson, charStats)
   const ratio = progress.mastered / progress.total
 
@@ -285,12 +328,17 @@ function TrackButton({
         <span className="text-xs tabular-nums">{formatPercent(ratio)}</span>
       </div>
       <p className="mt-0.5 text-xs">
-        Lesson {lesson + 1} of {TRACKS[script].length}
+        {t("journey.lessonOf", {
+          number: lesson + 1,
+          total: TRACKS[script].length,
+        })}
       </p>
       <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full bg-primary transition-[width]"
-          style={{ width: `${ratio * 100}%` }}
+        <motion.div
+          className="h-full bg-primary"
+          initial={{ width: 0 }}
+          animate={{ width: `${ratio * 100}%` }}
+          transition={{ type: "spring", stiffness: 120, damping: 24 }}
         />
       </div>
     </button>
@@ -298,6 +346,7 @@ function TrackButton({
 }
 
 function LessonChar({ id, stat }: { id: string; stat: CharStat | undefined }) {
+  const { t } = useTranslation()
   const kana = getKana(id)
   if (!kana) return null
 
@@ -310,19 +359,24 @@ function LessonChar({ id, stat }: { id: string; stat: CharStat | undefined }) {
         "relative w-16 overflow-hidden rounded-lg border px-2 py-2 text-center",
         done ? "border-emerald-500/40 bg-emerald-500/5" : "bg-muted/30"
       )}
-      title={`${kana.romaji} — ${formatPercent(level)} mastery`}
+      title={t("journey.charTitle", {
+        romaji: kana.romaji,
+        percent: formatPercent(level),
+      })}
     >
       <div className="font-jp text-2xl leading-none">{kana.char}</div>
       <div className="mt-1 text-[10px] text-muted-foreground">
         {kana.romaji}
       </div>
-      <span
+      <motion.span
         aria-hidden
         className={cn(
-          "absolute inset-x-0 bottom-0 h-[3px] origin-left transition-transform",
+          "absolute inset-x-0 bottom-0 h-[3px] origin-left",
           masteryClass(level)
         )}
-        style={{ transform: `scaleX(${level})` }}
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: level }}
+        transition={{ type: "spring", stiffness: 120, damping: 24 }}
       />
     </div>
   )

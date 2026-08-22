@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useSelector } from "@tanstack/react-store"
+import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -24,45 +25,64 @@ import { TRACKS, lessonAt } from "@/lib/journey"
 import { PASSES_FLOOR, PASSES_FULL } from "@/lib/momentum"
 import { MIN_TIME_LIMIT } from "@/lib/pressure"
 import { SCRIPTS, SCRIPT_LABELS } from "@/lib/kana"
+import { useLanguage } from "@/hooks/use-language"
 import { useTheme } from "@/hooks/use-theme"
 import {
   DEFAULT_SETTINGS,
   settingsStore,
   updateSettings,
 } from "@/stores/settings.store"
-import type { ThemePreference } from "@/lib/types"
+import type { LanguagePreference, ThemePreference } from "@/lib/types"
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage })
 
-const THEMES: Array<{ value: ThemePreference; label: string }> = [
-  { value: "system", label: "System" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
+const THEMES: Array<{
+  value: ThemePreference
+  labelKey:
+    "settings.themeSystem" | "settings.themeLight" | "settings.themeDark"
+}> = [
+  { value: "system", labelKey: "settings.themeSystem" },
+  { value: "light", labelKey: "settings.themeLight" },
+  { value: "dark", labelKey: "settings.themeDark" },
+]
+
+// Language names are shown in their own language on purpose — a Spanish
+// speaker stuck in English needs to find "Español", not "Spanish".
+const LANGUAGES: Array<{ value: LanguagePreference; label: string | null }> = [
+  { value: "system", label: null },
+  { value: "en", label: "English" },
+  { value: "es", label: "Español" },
 ]
 
 function SettingsPage() {
+  const { t } = useTranslation()
   const progression = useSelector(progressionStore, (s) => s)
   const settings = useSelector(settingsStore, (s) => s)
   const { theme, setTheme } = useTheme()
+  const { language, setLanguage } = useLanguage()
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t("settings.title")}
+        </h1>
         <p className="text-sm text-muted-foreground">
-          All data is saved in this browser. No account or server.
+          {t("settings.subtitle")}
         </p>
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Practice</CardTitle>
+          <CardTitle className="text-base">
+            {t("settings.practiceTitle")}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <Row
             id="accept-aliases"
-            title="Accept romanization variants"
-            description="Beyond Hepburn (shi, tsu, fu, ji), accepts si, tu, hu, zi and similar. Always saves the Hepburn form."
+            title={t("settings.aliasesTitle")}
+            description={t("settings.aliasesDesc")}
           >
             <Switch
               id="accept-aliases"
@@ -77,8 +97,8 @@ function SettingsPage() {
 
           <Row
             id="time-limit"
-            title="Timed mode"
-            description="Each character has a time limit. If time runs out it counts as an error and shows the answer, just like getting it wrong."
+            title={t("settings.timedTitle")}
+            description={t("settings.timedDesc")}
           >
             <Switch
               id="time-limit"
@@ -93,7 +113,9 @@ function SettingsPage() {
             <>
               <div className="space-y-2 ps-1">
                 <div className="flex items-center justify-between text-sm">
-                  <Label htmlFor="time-limit-value">Time per character</Label>
+                  <Label htmlFor="time-limit-value">
+                    {t("settings.timePerChar")}
+                  </Label>
                   <span className="text-muted-foreground tabular-nums">
                     {(settings.timeLimitMs / 1000).toFixed(1)}s
                   </span>
@@ -112,10 +134,10 @@ function SettingsPage() {
 
               <Row
                 id="speed-ramp"
-                title="Speed up with streak"
-                description={`Each correct answer in a row trims the time slightly, down to a minimum of ${(
-                  MIN_TIME_LIMIT / 1000
-                ).toFixed(1)}s. Getting it wrong restores the full time.`}
+                title={t("settings.rampTitle")}
+                description={t("settings.rampDesc", {
+                  seconds: (MIN_TIME_LIMIT / 1000).toFixed(1),
+                })}
               >
                 <Switch
                   id="speed-ramp"
@@ -132,17 +154,16 @@ function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Adaptive mode</CardTitle>
-          <CardDescription>
-            Characters you get wrong appear more often, and ones you confuse
-            with each other appear together so you have to tell them apart.
-          </CardDescription>
+          <CardTitle className="text-base">
+            {t("settings.adaptiveTitle")}
+          </CardTitle>
+          <CardDescription>{t("settings.adaptiveDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <Row
             id="focus-mode"
-            title="Focus Mode"
-            description="With this off, characters come out completely random."
+            title={t("settings.focusTitle")}
+            description={t("settings.focusDesc")}
           >
             <Switch
               id="focus-mode"
@@ -157,8 +178,8 @@ function SettingsPage() {
 
           <NumberRow
             id="activation"
-            label="Confusion count to activate a group"
-            description="How many times you need to confuse two characters before they enter targeted practice."
+            label={t("settings.activationLabel")}
+            description={t("settings.activationDesc")}
             value={settings.activationThreshold}
             min={1}
             max={6}
@@ -172,8 +193,8 @@ function SettingsPage() {
 
           <NumberRow
             id="graduation"
-            label="Correct answers in a row to master a group"
-            description="How many consecutive correct answers on the group's characters are needed to master it."
+            label={t("settings.graduationLabel")}
+            description={t("settings.graduationDesc")}
             value={settings.graduationStreak}
             min={2}
             max={10}
@@ -184,8 +205,8 @@ function SettingsPage() {
 
           <NumberRow
             id="cooldown"
-            label="Characters between streaks"
-            description="How many general pool characters appear before a group takes control again."
+            label={t("settings.cooldownLabel")}
+            description={t("settings.cooldownDesc")}
             value={settings.burstCooldown}
             min={0}
             max={20}
@@ -196,8 +217,11 @@ function SettingsPage() {
 
           <Row
             id="adaptive-pace"
-            title="Speed up when I'm on a roll"
-            description={`Counts your run on the current lesson's own characters, not on review. After ${PASSES_FLOOR} clean pass through them they take a bigger share of the drill, and by ${PASSES_FULL} the next lesson unlocks on fewer repetitions. One mistake on them puts the normal pace back.`}
+            title={t("settings.paceTitle")}
+            description={t("settings.paceDesc", {
+              floor: PASSES_FLOOR,
+              full: PASSES_FULL,
+            })}
           >
             <Switch
               id="adaptive-pace"
@@ -212,8 +236,8 @@ function SettingsPage() {
 
           <Row
             id="group-hint"
-            title="Show which group I'm practicing"
-            description='An indicator during the drill like "practicing つ vs し".'
+            title={t("settings.hintTitle")}
+            description={t("settings.hintDesc")}
           >
             <Switch
               id="group-hint"
@@ -228,30 +252,92 @@ function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Appearance</CardTitle>
+          <CardTitle className="text-base">
+            {t("settings.appearanceTitle")}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex gap-2">
-          {THEMES.map(({ value, label }) => (
-            <Button
-              key={value}
-              variant={theme === value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTheme(value)}
-            >
-              {label}
-            </Button>
-          ))}
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            {THEMES.map(({ value, labelKey }) => (
+              <Button
+                key={value}
+                variant={theme === value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTheme(value)}
+              >
+                {t(labelKey)}
+              </Button>
+            ))}
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium">{t("settings.languageLabel")}</p>
+            <div className="flex gap-2">
+              {LANGUAGES.map(({ value, label }) => (
+                <Button
+                  key={value}
+                  variant={language === value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setLanguage(value)}
+                >
+                  {label ?? t("settings.languageAuto")}
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Journey</CardTitle>
-          <CardDescription>
-            Hiragana and katakana progress separately: each syllabary has its
-            own journey and you can start with the one you're learning. Moving
-            lessons manually doesn't affect the other.
-          </CardDescription>
+          <CardTitle className="text-base">
+            {t("settings.soundTitle")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <Row
+            id="sound-enabled"
+            title={t("settings.soundEnabledTitle")}
+            description={t("settings.soundEnabledDesc")}
+          >
+            <Switch
+              id="sound-enabled"
+              checked={settings.soundEnabled}
+              onCheckedChange={(checked) =>
+                updateSettings({ soundEnabled: checked })
+              }
+            />
+          </Row>
+
+          {settings.soundEnabled && (
+            <div className="space-y-2 ps-1">
+              <div className="flex items-center justify-between text-sm">
+                <Label htmlFor="sound-volume">{t("settings.volume")}</Label>
+                <span className="text-muted-foreground tabular-nums">
+                  {Math.round(settings.soundVolume * 100)}%
+                </span>
+              </div>
+              <Slider
+                id="sound-volume"
+                min={0}
+                max={100}
+                step={5}
+                value={Math.round(settings.soundVolume * 100)}
+                onValueChange={(value) =>
+                  updateSettings({ soundVolume: (value as number) / 100 })
+                }
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {t("settings.journeyTitle")}
+          </CardTitle>
+          <CardDescription>{t("settings.journeyDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           {SCRIPTS.map((script) => {
@@ -261,10 +347,12 @@ function SettingsPage() {
             return (
               <div key={script} className="space-y-2">
                 <p className="text-sm">
-                  <span className="font-medium">{SCRIPT_LABELS[script]}</span> —
-                  lesson{" "}
+                  <span className="font-medium">{SCRIPT_LABELS[script]}</span> —{" "}
                   <span className="font-medium tabular-nums">
-                    {lesson + 1} of {last + 1}
+                    {t("settings.lessonOf", {
+                      number: lesson + 1,
+                      total: last + 1,
+                    })}
                   </span>{" "}
                   <span className="text-muted-foreground">{current.label}</span>{" "}
                   <span className="font-jp">{current.chars.join(" ")}</span>
@@ -276,7 +364,7 @@ function SettingsPage() {
                     disabled={lesson === 0}
                     onClick={() => setLesson(script, lesson - 1)}
                   >
-                    Previous
+                    {t("settings.previous")}
                   </Button>
                   <Button
                     variant="outline"
@@ -284,7 +372,7 @@ function SettingsPage() {
                     disabled={lesson >= last}
                     onClick={() => setLesson(script, lesson + 1)}
                   >
-                    Skip to next
+                    {t("settings.skipNext")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -292,7 +380,7 @@ function SettingsPage() {
                     disabled={lesson === 0}
                     onClick={() => setLesson(script, 0)}
                   >
-                    Back to start
+                    {t("settings.backToStart")}
                   </Button>
                 </div>
               </div>
@@ -303,19 +391,24 @@ function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Data</CardTitle>
-          <CardDescription>
-            Resetting settings leaves progress intact.
-          </CardDescription>
+          <CardTitle className="text-base">{t("settings.dataTitle")}</CardTitle>
+          <CardDescription>{t("settings.dataDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             onClick={() =>
-              updateSettings({ ...DEFAULT_SETTINGS, theme: settings.theme })
+              updateSettings({
+                ...DEFAULT_SETTINGS,
+                // Appearance-type preferences are not drill tuning: keep them.
+                theme: settings.theme,
+                language: settings.language,
+                soundEnabled: settings.soundEnabled,
+                soundVolume: settings.soundVolume,
+              })
             }
           >
-            Reset settings
+            {t("settings.resetSettings")}
           </Button>
           <ResetDialog />
         </CardContent>

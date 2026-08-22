@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react"
 import { useSelector } from "@tanstack/react-store"
 import { Sparkles } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { KanaGrid } from "@/components/kana-grid"
 import {
   ALL_KANA,
-  CATEGORIES,
+  CATEGORY_IDS,
   ROWS_BY_SCRIPT,
   SCRIPTS,
   SCRIPT_LABELS,
@@ -35,6 +36,7 @@ const WORST_LIMIT = 12
 const WORST_MIN_ATTEMPTS = 3
 
 export function KanaSelector() {
+  const { t } = useTranslation()
   const { enabled, lastTab } = useSelector(selectionStore, (s) => s)
   const progress = useSelector(progressStore, (s) => s)
   const [category, setCategory] = useState<KanaCategory>("gojuon")
@@ -75,11 +77,11 @@ export function KanaSelector() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="tabular-nums">
             <span className="font-medium text-foreground">{selectedCount}</span>{" "}
-            selected
+            {t("selector.selected")}
           </span>
           {selectedCount > 0 && (
             <Button variant="ghost" size="sm" onClick={clearSelection}>
-              Clear
+              {t("selector.clear")}
             </Button>
           )}
         </div>
@@ -89,13 +91,13 @@ export function KanaSelector() {
           additive filter, which is what makes them one click instead of two. */}
       <div className="mt-4 flex flex-wrap gap-1.5">
         <Chip
-          label={`${SCRIPT_LABELS[script]} basics`}
+          label={t("selector.presetBasics", { script: SCRIPT_LABELS[script] })}
           onClick={() =>
             selectOnly(cellsOf(script, "gojuon").map((kana) => kana.id))
           }
         />
         <Chip
-          label="+ dakuten"
+          label={t("selector.presetDakuten")}
           onClick={() =>
             selectOnly(
               [...cellsOf(script, "gojuon"), ...cellsOf(script, "dakuten")].map(
@@ -105,21 +107,21 @@ export function KanaSelector() {
           }
         />
         <Chip
-          label={`All ${SCRIPT_LABELS[script].toLowerCase()}`}
+          label={t("selector.presetAll", { script: SCRIPT_LABELS[script] })}
           onClick={() => selectOnly(cellsOf(script).map((kana) => kana.id))}
         />
         <Chip
-          label="Both syllabaries"
+          label={t("selector.presetBoth")}
           onClick={() => selectOnly(ALL_KANA.map((kana) => kana.id))}
         />
         <Chip
-          label="My worst characters"
+          label={t("selector.presetWorst")}
           icon={<Sparkles className="size-3.5" />}
           disabled={worst.length === 0}
           title={
             worst.length === 0
-              ? "You need to practice a bit before this has data"
-              : `The ${worst.length} characters with lowest accuracy`
+              ? t("selector.worstDisabled")
+              : t("selector.worstTitle", { count: worst.length })
           }
           onClick={() => selectOnly(worst)}
         />
@@ -130,7 +132,7 @@ export function KanaSelector() {
           {/* One category at a time: stacking all three turned the selector
               into a page of scrolling before the user could press Practice. */}
           <div className="flex flex-wrap items-center gap-1.5">
-            {CATEGORIES.map(({ id, label }) => {
+            {CATEGORY_IDS.map((id) => {
               const cells = cellsOf(tab, id)
               const selected = cells.filter((cell) => enabled[cell.id]).length
               return (
@@ -146,7 +148,7 @@ export function KanaSelector() {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {label}
+                  {t(`kana.category.${id}`)}
                   <span className="text-[11px] tabular-nums opacity-70">
                     {selected}/{cells.length}
                   </span>
@@ -167,7 +169,9 @@ export function KanaSelector() {
                   className="h-7 text-xs"
                   onClick={() => setShowMastery((prev) => !prev)}
                 >
-                  {showMastery ? "Show rōmaji" : "Show mastery"}
+                  {showMastery
+                    ? t("selector.showRomaji")
+                    : t("selector.showMastery")}
                 </Button>
               )}
               <SectionToggle
@@ -203,6 +207,7 @@ function MasteryAverage({
   ids: Array<string>
   stats: Record<string, CharStat>
 }) {
+  const { t } = useTranslation()
   const average = useMemo(() => {
     if (ids.length === 0) return 0
     const total = ids.reduce((sum, id) => sum + (mastery(stats[id]) ?? 0), 0)
@@ -214,9 +219,9 @@ function MasteryAverage({
   return (
     <span
       className="text-xs text-muted-foreground tabular-nums"
-      title="Average mastery for this category"
+      title={t("selector.avgTitle")}
     >
-      {formatPercent(average)} learned
+      {t("selector.learned", { percent: formatPercent(average) })}
     </span>
   )
 }
@@ -228,6 +233,7 @@ function SectionToggle({
   ids: Array<string>
   enabled: Record<string, boolean>
 }) {
+  const { t } = useTranslation()
   const allOn = ids.length > 0 && ids.every((id) => enabled[id])
   return (
     <Button
@@ -236,7 +242,7 @@ function SectionToggle({
       className="h-7 text-xs"
       onClick={() => setMany(ids, !allOn)}
     >
-      {allOn ? "Remove all" : "Add all"}
+      {allOn ? t("selector.removeAll") : t("selector.addAll")}
     </Button>
   )
 }

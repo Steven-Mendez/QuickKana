@@ -1,13 +1,23 @@
-import { ROWS_BY_SCRIPT, SCRIPTS, SCRIPT_LABELS } from "@/lib/kana"
-import { MASTERY_ATTEMPTS, formatPercent, mastery } from "@/lib/stats"
+import { useTranslation } from "react-i18next"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  CATEGORY_IDS,
+  ROWS_BY_SCRIPT,
+  SCRIPTS,
+  SCRIPT_LABELS,
+} from "@/lib/kana"
+import {
+  MASTERY_ATTEMPTS,
+  formatDuration,
+  formatPercent,
+  mastery,
+} from "@/lib/stats"
 import { cn } from "@/lib/utils"
-import type { CharStat, Kana, KanaCategory, KanaRow } from "@/lib/types"
-
-const CATEGORY_LABELS: Array<{ id: KanaCategory; label: string }> = [
-  { id: "gojuon", label: "Basics" },
-  { id: "dakuten", label: "Dakuten" },
-  { id: "digraph", label: "Digraphs" },
-]
+import type { CharStat, Kana, KanaRow } from "@/lib/types"
 
 const cellsOf = (row: KanaRow): Array<Kana> =>
   row.cells.filter((cell): cell is Kana => cell !== null)
@@ -18,6 +28,7 @@ const cellsOf = (row: KanaRow): Array<Kana> =>
  * question a learner actually asks first — how much of it do I know.
  */
 export function MasteryMap({ stats }: { stats: Record<string, CharStat> }) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-6">
       <Legend />
@@ -27,7 +38,7 @@ export function MasteryMap({ stats }: { stats: Record<string, CharStat> }) {
           <h3 className="text-sm font-medium">{SCRIPT_LABELS[script]}</h3>
 
           <div className="flex flex-wrap gap-x-8 gap-y-5">
-            {CATEGORY_LABELS.map(({ id, label }) => {
+            {CATEGORY_IDS.map((id) => {
               const rows = ROWS_BY_SCRIPT[script].filter(
                 (row) => row.category === id
               )
@@ -41,7 +52,7 @@ export function MasteryMap({ stats }: { stats: Record<string, CharStat> }) {
               return (
                 <div key={id} className="space-y-1.5">
                   <p className="flex items-baseline gap-1.5 text-xs text-muted-foreground">
-                    {label}
+                    {t(`kana.category.${id}`)}
                     <span className="tabular-nums">
                       {formatPercent(average)}
                     </span>
@@ -84,45 +95,77 @@ function MasteryCell({
   kana: Kana
   stat: CharStat | undefined
 }) {
+  const { t } = useTranslation()
   const level = mastery(stat)
 
   return (
-    <span
-      title={
-        level === null
-          ? `${kana.char} ${kana.romaji} — not practiced`
-          : `${kana.char} ${kana.romaji} — ${formatPercent(level)} · ${
-              stat?.correct
-            }/${stat?.attempts} correct`
-      }
-      className={cn(
-        "flex size-8 items-center justify-center rounded font-jp text-sm",
-        level === null && "bg-muted/40 text-muted-foreground/40"
-      )}
-      style={
-        level === null
-          ? undefined
-          : {
-              backgroundColor: `color-mix(in oklab, var(--color-emerald-500) ${Math.round(
-                12 + level * 78
-              )}%, transparent)`,
-            }
-      }
-    >
-      {kana.char}
-    </span>
+    <Popover>
+      <PopoverTrigger
+        aria-label={`${kana.char} ${kana.romaji}`}
+        className={cn(
+          // transition-colors so a mastery change animates its tint shift.
+          "flex size-8 cursor-pointer items-center justify-center rounded font-jp text-sm transition-colors duration-500 hover:ring-1 hover:ring-foreground/20",
+          level === null && "bg-muted/40 text-muted-foreground/40"
+        )}
+        style={
+          level === null
+            ? undefined
+            : {
+                backgroundColor: `color-mix(in oklab, var(--color-emerald-500) ${Math.round(
+                  12 + level * 78
+                )}%, transparent)`,
+              }
+        }
+      >
+        {kana.char}
+      </PopoverTrigger>
+      <PopoverContent className="w-52">
+        <div className="flex items-baseline gap-2">
+          <span className="font-jp text-2xl">{kana.char}</span>
+          <span className="text-muted-foreground">{kana.romaji}</span>
+          <span className="ms-auto font-semibold tabular-nums">
+            {level === null ? "—" : formatPercent(level)}
+          </span>
+        </div>
+        {stat && stat.attempts > 0 ? (
+          <dl className="mt-2 space-y-1 text-xs text-muted-foreground">
+            <div className="flex justify-between">
+              <dt>{t("masteryMap.correct")}</dt>
+              <dd className="tabular-nums">
+                {stat.correct}/{stat.attempts}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>{t("masteryMap.bestStreak")}</dt>
+              <dd className="tabular-nums">{stat.bestStreak}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>{t("masteryMap.perAnswer")}</dt>
+              <dd className="tabular-nums">
+                {formatDuration(stat.totalMs / stat.attempts)}
+              </dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("masteryMap.notYet")}
+          </p>
+        )}
+      </PopoverContent>
+    </Popover>
   )
 }
 
 function Legend() {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
       <span className="flex items-center gap-1.5">
-        Not practiced
+        {t("masteryMap.notPracticed")}
         <span className="size-3 rounded-sm bg-muted/40" />
       </span>
       <span className="flex items-center gap-1.5">
-        Mastery
+        {t("masteryMap.mastery")}
         {[0.15, 0.4, 0.65, 0.9].map((level) => (
           <span
             key={level}
@@ -137,8 +180,7 @@ function Legend() {
         100%
       </span>
       <span className="ms-auto">
-        A character reaches 100% with {MASTERY_ATTEMPTS} correct answers in a
-        row.
+        {t("masteryMap.legendNote", { count: MASTERY_ATTEMPTS })}
       </span>
     </div>
   )

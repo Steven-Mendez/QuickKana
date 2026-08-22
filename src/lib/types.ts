@@ -97,6 +97,8 @@ export interface AttemptRecord {
 
 export type ThemePreference = "light" | "dark" | "system"
 
+export type LanguagePreference = "en" | "es" | "system"
+
 export interface Settings {
   focusMode: boolean
   /** Cross-misses on a pair before its group activates. */
@@ -121,6 +123,10 @@ export interface Settings {
   speedRamp: boolean
   showGroupHint: boolean
   theme: ThemePreference
+  language: LanguagePreference
+  soundEnabled: boolean
+  /** 0–1, applied to every effect. */
+  soundVolume: number
 }
 
 export interface SelectionState {
@@ -180,5 +186,7 @@ export interface SessionState {
   graduated: Array<string>
   /** Lesson ids unlocked during this session, for the summary. */
   unlocked: Array<string>
+  /** The session's best streak beat the all-time record. Set on finish. */
+  newRecord: boolean
   ended: boolean
 }

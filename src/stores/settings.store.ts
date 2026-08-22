@@ -15,6 +15,9 @@ export const DEFAULT_SETTINGS: Settings = {
   speedRamp: true,
   showGroupHint: true,
   theme: "system",
+  language: "system",
+  soundEnabled: true,
+  soundVolume: 0.6,
 }
 
 const isSettings = (value: unknown): value is Partial<Settings> =>

@@ -6,8 +6,12 @@ export const STORAGE_KEYS = {
   progress: `${PREFIX}v1:progress`,
   progression: `${PREFIX}v1:progression`,
   history: `${PREFIX}v1:history`,
+  /** One-shot flag, not a preference: the onboarding tour was dismissed once. */
+  tourSeen: `${PREFIX}v1:tour-seen`,
   /** Kept outside the versioned namespace so the anti-FOUC script can read it. */
   theme: `${PREFIX}theme`,
+  /** Resolved language ("en"/"es"), mirrored for the pre-paint <html lang> script. */
+  language: `${PREFIX}language`,
 } as const
 
 const canUseStorage = () =>

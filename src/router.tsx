@@ -1,4 +1,6 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router"
+// Side effect: i18next must be initialized before any route calls useTranslation.
+import "@/lib/i18n"
 import { routeTree } from "./routeTree.gen"
 
 export function getRouter() {
