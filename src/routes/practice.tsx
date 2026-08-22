@@ -9,7 +9,7 @@ import { useReward } from "react-rewards"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { DrillCard } from "@/components/drill-card"
 import { SessionSummary } from "@/components/session-summary"
-import { WritePractice } from "@/components/write-practice"
+import { WriteDrillCard } from "@/components/write-drill-card"
 import { useDrill } from "@/hooks/use-drill"
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
 import { lessonAt, lessonById } from "@/lib/journey"
@@ -24,16 +24,11 @@ export const Route = createFileRoute("/practice")({ component: Practice })
 const FULL_HEIGHT = "min-h-[calc(100dvh-3.5rem)]"
 
 /**
- * Same route for both drills; which one runs is a persisted preference. The
- * split into two components matters: each drill's hook wires its own effects
- * and timers, so they must never be mounted at the same time.
+ * One drill, two kinds of prompt: reading (type the rōmaji) and writing
+ * (trace the kana). The session mixes them; which types are served is a
+ * settings choice, not a mode.
  */
 function Practice() {
-  const drillMode = useSelector(progressionStore, (s) => s.drillMode)
-  return drillMode === "write" ? <WritePractice /> : <ReadPractice />
-}
-
-function ReadPractice() {
   const {
     session,
     settings,
@@ -44,11 +39,17 @@ function ReadPractice() {
     activeGroup,
     pushingPace,
     journeyPhase,
+    writeOutline,
     setInput,
     submit,
     skip,
     finish,
     restart,
+    markAssisted,
+    strokeCorrect,
+    strokeMistake,
+    completeWrite,
+    skipUnloadable,
   } = useDrill()
   const { t } = useTranslation()
   const recordStreak = useSelector(
@@ -76,7 +77,9 @@ function ReadPractice() {
       <main className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-24 text-center">
         <h1 className="text-xl font-semibold">{t("practice.emptyTitle")}</h1>
         <p className="text-sm text-muted-foreground">
-          {t("practice.emptyBody")}
+          {settings.practiceReading
+            ? t("practice.emptyBody")
+            : t("writePractice.emptyBody")}
         </p>
         <Link to="/" className={buttonVariants()}>
           {t("practice.emptyCta")}
@@ -95,6 +98,7 @@ function ReadPractice() {
       : null
 
   const accuracy = session.attempts > 0 ? session.correct / session.attempts : 0
+  const isWritePrompt = session.exercise === "write"
 
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -120,17 +124,32 @@ function ReadPractice() {
           )}
 
           {kana ? (
-            <DrillCard
-              kana={kana}
-              session={session}
-              settings={settings}
-              activeGroup={activeGroup}
-              limitMs={limitMs}
-              recordStreak={recordStreak}
-              pushingPace={pushingPace}
-              onInput={setInput}
-              onSubmit={submit}
-            />
+            isWritePrompt ? (
+              <WriteDrillCard
+                kana={kana}
+                session={session}
+                settings={settings}
+                outline={writeOutline}
+                recordStreak={recordStreak}
+                onCorrectStroke={strokeCorrect}
+                onMistake={strokeMistake}
+                onComplete={completeWrite}
+                onAssist={markAssisted}
+                onLoadError={skipUnloadable}
+              />
+            ) : (
+              <DrillCard
+                kana={kana}
+                session={session}
+                settings={settings}
+                activeGroup={activeGroup}
+                limitMs={limitMs}
+                recordStreak={recordStreak}
+                pushingPace={pushingPace}
+                onInput={setInput}
+                onSubmit={submit}
+              />
+            )
           ) : (
             <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
               {t("common.loading")}
@@ -162,8 +181,12 @@ function ReadPractice() {
             </div>
 
             <div className="hidden lg:block">
-              <kbd className="rounded border px-1 py-0.5">Enter</kbd>{" "}
-              {t("practice.confirm")} ·{" "}
+              {!isWritePrompt && (
+                <>
+                  <kbd className="rounded border px-1 py-0.5">Enter</kbd>{" "}
+                  {t("practice.confirm")} ·{" "}
+                </>
+              )}
               <kbd className="rounded border px-1 py-0.5">Esc</kbd>{" "}
               {t("practice.end")}
             </div>

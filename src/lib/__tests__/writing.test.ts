@@ -4,7 +4,9 @@ import {
   emptyWriteCharStat,
   scoreWriteAttempt,
 } from "@/lib/writing"
+import { mastery, mergeBestMastery } from "@/lib/stats"
 import type { WriteAttempt } from "@/lib/writing"
+import type { CharStat } from "@/lib/types"
 
 const attempt = (overrides: Partial<WriteAttempt>): WriteAttempt => ({
   mistakes: 0,
@@ -106,6 +108,25 @@ describe("applyWriteAttempt", () => {
     expect(held.streak).toBe(1)
     expect(held.attempts).toBe(2)
     expect(held.correct).toBe(1)
+  })
+
+  it("merges reading and writing by best mastery per character", () => {
+    const stat = (attempts: number, correct: number): CharStat => ({
+      attempts,
+      correct,
+      streak: 0,
+      bestStreak: 0,
+      totalMs: 0,
+      lastSeenAt: 0,
+      weight: 1,
+    })
+    const read = { a: stat(6, 2), b: stat(6, 6) }
+    const write = { a: { ...stat(6, 6), strokeMistakes: 0 } }
+
+    const merged = mergeBestMastery(read, write)
+    // `a` is stronger written than read; `b` only exists in reading.
+    expect(mastery(merged.a)).toBe(mastery(write.a))
+    expect(merged.b).toBe(read.b)
   })
 
   it("a skip adds no stroke mistakes", () => {

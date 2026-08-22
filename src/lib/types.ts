@@ -98,11 +98,10 @@ export interface WritingState {
   totals: {
     attempts: number
     correct: number
+    /** Sessions that included at least one writing attempt. */
     sessions: number
     totalMs: number
   }
-  /** Write-only records — never mixed with the reading ones. */
-  records: { bestSessionStreak: number }
 }
 
 export interface AttemptRecord {
@@ -125,6 +124,13 @@ export type LanguagePreference = "en" | "es" | "system"
 
 export interface Settings {
   focusMode: boolean
+  /**
+   * Which exercise types the drill serves. Reading and writing are both part
+   * of learning a kana, so a session mixes them; either can be turned off in
+   * settings, but never both.
+   */
+  practiceReading: boolean
+  practiceWriting: boolean
   /** Cross-misses on a pair before its group activates. */
   activationThreshold: number
   /** Consecutive correct answers on a group's members before it graduates. */
@@ -167,6 +173,9 @@ export interface SelectionState {
 
 // ----------------------------------------------------------------- session
 
+/** What the current prompt asks for: type the rōmaji, or trace the kana. */
+export type ExerciseType = "read" | "write"
+
 /** Why the scheduler picked the current kana — drives the drill's hint badge. */
 export type PickSource = { type: "pool" } | { type: "group"; groupId: string }
 
@@ -188,6 +197,8 @@ export interface SessionState {
   startedAt: number
   /** Kana currently on screen, or `null` before the first pick / after ending. */
   current: Pick | null
+  /** Whether the current prompt is a reading or a writing exercise. */
+  exercise: ExerciseType
   /** When the current kana was shown, for the response timer. */
   shownAt: number
   input: string

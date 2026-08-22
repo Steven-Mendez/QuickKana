@@ -13,7 +13,6 @@ export const emptyWriting = (): WritingState => ({
   version: 1,
   charStats: {},
   totals: { attempts: 0, correct: 0, sessions: 0, totalMs: 0 },
-  records: { bestSessionStreak: 0 },
 })
 
 const isWriting = (value: unknown): value is WritingState =>
@@ -33,7 +32,6 @@ export const writingStore = createStore<WritingState>({
   ...emptyWriting(),
   ...stored,
   totals: { ...emptyWriting().totals, ...stored.totals },
-  records: { ...emptyWriting().records, ...stored.records },
 })
 
 // Written on every completed character, so the writes are debounced.
@@ -72,14 +70,6 @@ export function recordWriteAnswer(
 
   return outcome.correct
 }
-
-export const recordWriteSessionStreak = (bestStreak: number) =>
-  writingStore.setState((prev) => ({
-    ...prev,
-    records: {
-      bestSessionStreak: Math.max(prev.records.bestSessionStreak, bestStreak),
-    },
-  }))
 
 export const countWriteSession = () =>
   writingStore.setState((prev) => ({

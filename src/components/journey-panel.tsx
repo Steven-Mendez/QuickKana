@@ -18,8 +18,9 @@ import {
   trackProgress,
 } from "@/lib/journey"
 import { SCRIPTS, SCRIPT_LABELS, getKana } from "@/lib/kana"
-import { formatPercent, mastery } from "@/lib/stats"
+import { formatPercent, mastery, mergeBestMastery } from "@/lib/stats"
 import { progressStore } from "@/stores/progress.store"
+import { writingStore } from "@/stores/writing.store"
 import {
   lessonOf,
   progressionStore,
@@ -37,7 +38,15 @@ import type { CharStat, Script } from "@/lib/types"
 export function JourneyPanel() {
   const { t } = useTranslation()
   const progression = useSelector(progressionStore, (s) => s)
-  const charStats = useSelector(progressStore, (s) => s.charStats)
+  const readStats = useSelector(progressStore, (s) => s.charStats)
+  const writeStats = useSelector(writingStore, (s) => s.charStats)
+
+  // The panel shows the same merged view the unlock gates are judged on —
+  // reading or writing a character well, whichever is stronger, counts.
+  const charStats = useMemo(
+    () => mergeBestMastery(readStats, writeStats),
+    [readStats, writeStats]
+  )
 
   const track = progression.track
   const lesson = lessonOf(progression, track)

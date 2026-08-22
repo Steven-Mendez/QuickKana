@@ -34,6 +34,12 @@ const PALETTES = {
 export interface KanaWritingCanvasHandle {
   /** Plays the stroke-order demo, then puts the quiz back. */
   showDemo: () => void
+  /** Cuts a running demo short and starts the quiz right away. */
+  skipDemo: () => void
+  /** Clears everything drawn and quizzes the character from stroke one. */
+  restartQuiz: () => void
+  /** Shows the finished character (the reveal after the last failed try). */
+  revealCharacter: () => void
 }
 
 interface KanaWritingCanvasProps {
@@ -44,11 +50,13 @@ interface KanaWritingCanvasProps {
   leniency: number
   /** Parent turns the completion flash off under prefers-reduced-motion. */
   highlightOnComplete: boolean
-  onCorrectStroke?: () => void
+  onCorrectStroke?: (strokeNum: number) => void
   onMistake?: () => void
   onComplete: (result: { totalMistakes: number }) => void
   /** Stroke data failed to load — the drill should skip this character. */
   onLoadError?: (char: string) => void
+  /** The stroke-order demo started / finished (incl. skipped) — drives UI. */
+  onDemoStateChange?: (active: boolean) => void
   ariaLabel?: string
   className?: string
   ref?: Ref<KanaWritingCanvasHandle>
@@ -72,6 +80,7 @@ export function KanaWritingCanvas({
   onMistake,
   onComplete,
   onLoadError,
+  onDemoStateChange,
   ariaLabel,
   className,
   ref,
@@ -92,6 +101,7 @@ export function KanaWritingCanvas({
     onMistake,
     onComplete,
     onLoadError,
+    onDemoStateChange,
   })
   latest.current = {
     char,
@@ -102,6 +112,7 @@ export function KanaWritingCanvas({
     onMistake,
     onComplete,
     onLoadError,
+    onDemoStateChange,
   }
 
   const startQuiz = () => {
@@ -111,8 +122,10 @@ export function KanaWritingCanvas({
     void writer.quiz({
       leniency: latest.current.leniency,
       highlightOnComplete: latest.current.highlightOnComplete,
-      onCorrectStroke: () => {
-        if (latest.current.char === shown) latest.current.onCorrectStroke?.()
+      onCorrectStroke: (strokeData) => {
+        if (latest.current.char === shown) {
+          latest.current.onCorrectStroke?.(strokeData.strokeNum)
+        }
       },
       onMistake: () => {
         if (latest.current.char === shown) latest.current.onMistake?.()
@@ -153,6 +166,10 @@ export function KanaWritingCanvas({
       showCharacter: false,
       showOutline: latest.current.showOutline,
       drawingWidth: Math.max(6, Math.round(size / 22)),
+      // A snappy demo: the default 1s pause between strokes makes learners
+      // wait far more than watch.
+      strokeAnimationSpeed: 2.5,
+      delayBetweenStrokes: 180,
       ...palette,
       charDataLoader,
       onLoadCharDataError: () =>
@@ -214,6 +231,13 @@ export function KanaWritingCanvas({
     }
   }, [isDark])
 
+  const endDemo = (writer: HanziWriter, hideDuration: number) => {
+    demoRequestedRef.current = null
+    latest.current.onDemoStateChange?.(false)
+    void writer.hideCharacter({ duration: hideDuration })
+    startQuiz()
+  }
+
   useImperativeHandle(
     ref,
     () => ({
@@ -222,6 +246,7 @@ export function KanaWritingCanvas({
         if (!writer) return
         const shown = latest.current.char
         demoRequestedRef.current = shown
+        latest.current.onDemoStateChange?.(true)
         // Wait for any in-flight setCharacter() so the demo animates the
         // character actually on screen.
         void charChainRef.current.then(() => {
@@ -231,21 +256,40 @@ export function KanaWritingCanvas({
           writer.cancelQuiz()
           void writer.animateCharacter({
             onComplete: () => {
+              // Skipping cancels the animation and has already restarted the
+              // quiz — a second restart here would wipe the user's strokes.
+              if (demoRequestedRef.current !== shown) return
               // Hold the finished character for a beat before quizzing again.
               setTimeout(() => {
                 if (
                   writerRef.current !== writer ||
-                  latest.current.char !== shown
+                  latest.current.char !== shown ||
+                  demoRequestedRef.current !== shown
                 ) {
                   return
                 }
-                demoRequestedRef.current = null
-                void writer.hideCharacter({ duration: 160 })
-                startQuiz()
-              }, 500)
+                endDemo(writer, 160)
+              }, 350)
             },
           })
         })
+      },
+      skipDemo: () => {
+        const writer = writerRef.current
+        if (!writer || demoRequestedRef.current === null) return
+        endDemo(writer, 0)
+      },
+      restartQuiz: () => {
+        const writer = writerRef.current
+        if (!writer) return
+        writer.cancelQuiz()
+        startQuiz()
+      },
+      revealCharacter: () => {
+        const writer = writerRef.current
+        if (!writer) return
+        writer.cancelQuiz()
+        void writer.showCharacter({ duration: 250 })
       },
     }),
     []

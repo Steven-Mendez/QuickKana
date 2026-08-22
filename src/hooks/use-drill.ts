@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSelector } from "@tanstack/react-store"
 import { getKana, requireKana, resolveTyped } from "@/lib/kana"
 import { isCorrect } from "@/lib/kana/romaji"
-import { lessonAt, lessonPhase, poolUpTo } from "@/lib/journey"
+import { writableIds } from "@/lib/kana/strokes"
+import { isMastered, lessonAt, lessonPhase, poolUpTo } from "@/lib/journey"
 import { guidedPool } from "@/lib/drill-pool"
 import { milestoneAt, timeLimitFor } from "@/lib/pressure"
 import { isPushingPace } from "@/lib/momentum"
+import { mergeBestMastery } from "@/lib/stats"
 import { playEffect } from "@/lib/sound"
 import { nextKana } from "@/lib/scheduler"
 import {
@@ -23,6 +25,12 @@ import {
 import { selectedIds, selectionStore } from "@/stores/selection.store"
 import { settingsStore } from "@/stores/settings.store"
 import {
+  countWriteSession,
+  recordWriteAnswer,
+  writingAsProgress,
+  writingStore,
+} from "@/stores/writing.store"
+import {
   endSession,
   sessionStore,
   setInput,
@@ -30,7 +38,17 @@ import {
   startSession,
 } from "@/stores/session.store"
 import type { Lesson } from "@/lib/journey"
-import type { SessionState } from "@/lib/types"
+import type { ExerciseType, SessionState } from "@/lib/types"
+
+/** Failed tries (wrong strokes) before a writing prompt counts as a miss. */
+export const WRITE_MAX_TRIES = 3
+
+/** How long the completed character stays on screen before the next prompt. */
+const WRITE_ADVANCE_CLEAN = 650
+/** A completion with restarts holds longer so the red feedback registers. */
+const WRITE_ADVANCE_MISSED = 1100
+/** The reveal after the last failed try needs time to be read. */
+const WRITE_ADVANCE_FAILED = 1600
 
 /**
  * The lesson currently being introduced, or `null` outside guided mode — free
@@ -42,6 +60,17 @@ function currentLesson(): Lesson | null {
   const { track } = progression
   return lessonAt(track, lessonOf(progression, track))
 }
+
+/**
+ * The stats every journey gate is judged on: reading and writing merged,
+ * best mastery per character (see `mergeBestMastery`). Either exercise moves
+ * the same journey.
+ */
+const gateStats = () =>
+  mergeBestMastery(
+    progressStore.state.charStats,
+    writingStore.state.charStats
+  )
 
 /**
  * What the drill draws from. In guided mode that is `guidedPool` — the new
@@ -56,12 +85,7 @@ function currentPool(lessonStreak: number): {
   const lesson = currentLesson()
   if (!lesson) return { ids: selectedIds(selectionStore.state) }
 
-  return guidedPool(
-    progression.track,
-    lesson.index,
-    progressStore.state.charStats,
-    lessonStreak
-  )
+  return guidedPool(progression.track, lesson.index, gateStats(), lessonStreak)
 }
 
 /**
@@ -93,27 +117,93 @@ function nextLessonStreak(
   return correct ? session.lessonStreak + 1 : 0
 }
 
+/**
+ * One drill, two kinds of prompt. Reading and writing are both part of
+ * learning a kana, so a session mixes them: each advance picks an exercise
+ * type (either can be turned off in settings, never both) and then a
+ * character from that exercise's own adaptive stats.
+ *
+ * Reading keeps everything it always had — confusion bursts, lesson pacing,
+ * the timed mode, unlocks. Writing deliberately reuses none of those: bursts
+ * and pairing are typing concepts, a clock over handwriting punishes careful
+ * strokes, and lessons unlock on reading mastery. What writing brings is its
+ * own scoring (see lib/writing.ts) and the three-tries rule: a wrong stroke
+ * restarts the character, and the third wrong stroke fails it and reveals
+ * the answer.
+ */
 export function useDrill() {
   const session = useSelector(sessionStore, (s) => s)
   const settings = useSelector(settingsStore, (s) => s)
   const selection = useSelector(selectionStore, (s) => s)
   const progression = useSelector(progressionStore, (s) => s)
   const charStats = useSelector(progressStore, (s) => s.charStats)
+  const writeCharStats = useSelector(writingStore, (s) => s.charStats)
 
   // Only practice.tsx's empty-pool check reads this, so the cumulative pool is
   // fine even during focus — a lesson never has fewer than three characters.
-  const pool = useMemo(
-    () =>
+  // With reading off, only what the writing drill can serve counts.
+  const pool = useMemo(() => {
+    const base =
       progression.mode === "journey"
         ? poolUpTo(progression.track, lessonOf(progression, progression.track))
-        : selectedIds(selection),
-    [progression, selection]
-  )
+        : selectedIds(selection)
+    return settings.practiceReading ? base : writableIds(base)
+  }, [progression, selection, settings.practiceReading])
+
   const kana = session.current ? getKana(session.current.id) : undefined
+
+  /**
+   * Per-prompt writing bookkeeping fed by hanzi-writer callbacks. Lives
+   * outside React state: stroke events must never re-render mid-trace.
+   */
+  const writePrompt = useRef({ mistakes: 0, assisted: false, outline: true })
+
+  // Mirrored into state only for the canvas prop; frozen per prompt so a
+  // mastery change on completion can't yank the guide off the finished glyph.
+  const [writeOutline, setWriteOutline] = useState(true)
 
   const advance = useCallback(() => {
     const state = sessionStore.state
+    const config = settingsStore.state
     const { ids, boost } = currentPool(pacingStreak(state.lessonStreak))
+
+    // Which exercise this prompt is. An in-flight confusion burst always
+    // finishes first — interleaving tracing into a discrimination sequence
+    // would defeat its point.
+    const writablepool = writableIds(ids)
+    const burstActive = !!state.burst && state.burst.queue.length > 0
+    let exercise: ExerciseType
+    if (!config.practiceWriting || writablepool.length === 0) exercise = "read"
+    else if (!config.practiceReading) exercise = "write"
+    else if (burstActive) exercise = "read"
+    else exercise = Math.random() < 0.5 ? "read" : "write"
+
+    if (exercise === "write") {
+      const { pick } = nextKana(
+        { lastShownId: state.lastShownId, burst: null, sinceBurst: 0 },
+        writablepool,
+        writingAsProgress(writingStore.state),
+        config,
+        Math.random
+      )
+
+      // First time this kana is ever written — the drill demos the strokes.
+      const introducing =
+        !!pick && (writingStore.state.charStats[pick.id]?.attempts ?? 0) === 0
+      const stat = pick ? writingStore.state.charStats[pick.id] : undefined
+      const outline = config.writeAlwaysOutline || !isMastered(stat)
+
+      writePrompt.current = { mistakes: 0, assisted: false, outline }
+      setWriteOutline(outline)
+      // Only lastShownId moves: a paused read burst must survive the detour.
+      sessionStore.setState((prev) => ({
+        ...prev,
+        lastShownId: pick?.id ?? prev.lastShownId,
+      }))
+      showPick(pick, introducing, "write")
+      return
+    }
+
     const { pick, state: schedulerState } = nextKana(
       {
         lastShownId: state.lastShownId,
@@ -122,7 +212,7 @@ export function useDrill() {
       },
       ids,
       progressStore.state,
-      settingsStore.state,
+      config,
       Math.random,
       boost
     )
@@ -133,7 +223,7 @@ export function useDrill() {
       !!pick && (progressStore.state.charStats[pick.id]?.attempts ?? 0) === 0
 
     sessionStore.setState((prev) => ({ ...prev, ...schedulerState }))
-    showPick(pick, introducing)
+    showPick(pick, introducing, "read")
   }, [])
 
   // Serve the first character once a session is on screen with a non-empty pool.
@@ -144,7 +234,7 @@ export function useDrill() {
 
   const submit = useCallback(() => {
     const state = sessionStore.state
-    if (!state.current) return
+    if (!state.current || state.exercise !== "read") return
 
     // A correct answer holds the screen for a beat before advancing. Hitting
     // Enter again inside that window must not score the same character twice.
@@ -176,9 +266,7 @@ export function useDrill() {
     }
 
     const lesson = currentLesson()
-    const phaseBefore = lesson
-      ? lessonPhase(lesson, progressStore.state.charStats)
-      : null
+    const phaseBefore = lesson ? lessonPhase(lesson, gateStats()) : null
 
     const { graduated } = recordAnswer(
       {
@@ -202,7 +290,7 @@ export function useDrill() {
     const enteredMix =
       lesson !== null &&
       phaseBefore === "focus" &&
-      lessonPhase(lesson, progressStore.state.charStats) === "mix"
+      lessonPhase(lesson, gateStats()) === "mix"
 
     // Computed before the state below is written: the unlock has to be judged
     // on the streak this answer just extended, not the stale one.
@@ -216,7 +304,7 @@ export function useDrill() {
       correct && progressionStore.state.mode === "journey"
         ? advanceLesson(
             progressionStore.state.track,
-            progressStore.state.charStats,
+            gateStats(),
             pacingStreak(lessonStreak)
           )
         : null
@@ -257,11 +345,12 @@ export function useDrill() {
   /**
    * The clock ran out. Scored exactly like a wrong answer — including the
    * retry that follows — because a character you could not read in time is one
-   * you do not know yet.
+   * you do not know yet. Reading only: the writing drill has no clock.
    */
   const timeout = useCallback(() => {
     const state = sessionStore.state
     if (!state.current || state.phase !== "prompt") return
+    if (state.exercise !== "read") return
 
     const shown = requireKana(state.current.id)
 
@@ -298,8 +387,10 @@ export function useDrill() {
   }, [])
 
   // The authoritative clock. The countdown the user sees ticks separately so a
-  // 50ms redraw never touches the rest of the drill.
-  const limitMs = timeLimitFor(settings, session.streak)
+  // 50ms redraw never touches the rest of the drill. Never runs on a writing
+  // prompt.
+  const limitMs =
+    session.exercise === "read" ? timeLimitFor(settings, session.streak) : null
 
   useEffect(() => {
     if (limitMs === null || session.phase !== "prompt" || !session.current) {
@@ -309,34 +400,179 @@ export function useDrill() {
     return () => clearTimeout(id)
   }, [limitMs, session.phase, session.current, session.shownAt, timeout])
 
+  // ---------------------------------------------------------------- writing
+
+  /** The demo ran on this prompt — the attempt no longer counts for mastery. */
+  const markAssisted = useCallback(() => {
+    writePrompt.current.assisted = true
+  }, [])
+
+  /** Rising pitch per stroke: the little ladder is what makes it addictive. */
+  const strokeCorrect = useCallback((strokeNum: number) => {
+    playEffect("strokeCorrect", { rate: 1 + Math.min(strokeNum, 8) * 0.08 })
+  }, [])
+
+  /** Whether this session already counted toward writing sessions. */
+  const sessionHadWriting = useRef(false)
+  useEffect(() => {
+    sessionHadWriting.current = false
+  }, [session.id])
+
+  const recordWritePrompt = useCallback((skipped: boolean): boolean => {
+    const state = sessionStore.state
+    const shown = requireKana(state.current!.id)
+
+    if (state.attempts === 0) {
+      countSession()
+      touchDay()
+    }
+    if (!sessionHadWriting.current) {
+      countWriteSession()
+      sessionHadWriting.current = true
+    }
+
+    return recordWriteAnswer({
+      kanaId: shown.id,
+      mistakes: writePrompt.current.mistakes,
+      assisted: writePrompt.current.assisted,
+      outline: writePrompt.current.outline,
+      skipped,
+      ms: Date.now() - state.shownAt,
+    })
+  }, [])
+
+  /**
+   * A wrong stroke. Returns what the canvas should do next: clear and retry
+   * from stroke one, or — after the third failure — reveal the answer while
+   * the miss is recorded.
+   */
+  const strokeMistake = useCallback((): "retry" | "failed" => {
+    const state = sessionStore.state
+    if (!state.current || state.exercise !== "write") return "retry"
+
+    writePrompt.current.mistakes += 1
+    playEffect("strokeWrong")
+
+    if (writePrompt.current.mistakes < WRITE_MAX_TRIES) return "retry"
+
+    // Third strike: scored as a miss (streak resets — see scoreWriteAttempt),
+    // the answer is revealed, and the drill moves on.
+    recordWritePrompt(false)
+    sessionStore.setState((prev) => ({
+      ...prev,
+      attempts: prev.attempts + 1,
+      streak: 0,
+      phase: "retry",
+      missedCurrent: true,
+    }))
+    setTimeout(advance, WRITE_ADVANCE_FAILED)
+    return "failed"
+  }, [advance, recordWritePrompt])
+
+  /** The character was completed (never reached three wrong strokes). */
+  const completeWrite = useCallback(() => {
+    const state = sessionStore.state
+    if (!state.current || state.exercise !== "write") return
+    if (state.phase !== "prompt") return
+
+    const shown = requireKana(state.current.id)
+    const lesson = currentLesson()
+    const phaseBefore = lesson ? lessonPhase(lesson, gateStats()) : null
+
+    const correct = recordWritePrompt(false)
+
+    // Writing moves the same journey as reading: this completion may have
+    // been the one that made the section familiar or cleared the unlock gate
+    // (both judged on the merged best-of-both stats). Same streak hygiene as
+    // the reading path — see submit() for why each reset exists.
+    const enteredMix =
+      lesson !== null &&
+      phaseBefore === "focus" &&
+      lessonPhase(lesson, gateStats()) === "mix"
+    const lessonStreak = enteredMix
+      ? 0
+      : nextLessonStreak(state, shown.id, correct)
+    const unlocked =
+      correct && progressionStore.state.mode === "journey"
+        ? advanceLesson(
+            progressionStore.state.track,
+            gateStats(),
+            pacingStreak(lessonStreak)
+          )
+        : null
+
+    sessionStore.setState((prev) => {
+      const streak = correct ? prev.streak + 1 : 0
+      return {
+        ...prev,
+        attempts: prev.attempts + 1,
+        correct: prev.correct + (correct ? 1 : 0),
+        streak,
+        bestStreak: Math.max(prev.bestStreak, streak),
+        lessonStreak: unlocked === null ? lessonStreak : 0,
+        unlocked:
+          unlocked === null ? prev.unlocked : [...prev.unlocked, unlocked],
+        phase: correct ? "correct" : "retry",
+        missedCurrent: !correct,
+      }
+    })
+
+    // The wrong-stroke tones already played during the trace, so a missed
+    // completion stays silent here.
+    if (unlocked !== null) playEffect("unlock")
+    else if (correct && milestoneAt(state.streak + 1) !== null) {
+      playEffect("streakMilestone")
+    } else if (correct) {
+      playEffect("correct")
+    }
+
+    setTimeout(advance, correct ? WRITE_ADVANCE_CLEAN : WRITE_ADVANCE_MISSED)
+  }, [advance, recordWritePrompt])
+
+  /** Stroke data failed to load — move on without scoring anything. */
+  const skipUnloadable = useCallback(() => {
+    advance()
+  }, [advance])
+
+  // ------------------------------------------------------------------ shared
+
   /** Gives up on the current character and moves on, scoring it as a miss. */
   const skip = useCallback(() => {
     const state = sessionStore.state
     if (!state.current) return
 
     if (state.phase === "prompt") {
-      const shown = requireKana(state.current.id)
-      recordAnswer(
-        {
-          kanaId: shown.id,
-          expected: shown.romaji,
-          typed: "",
-          correct: false,
-          confusedWith: null,
-          ms: Date.now() - state.shownAt,
-          sessionId: state.id,
-        },
-        settingsStore.state
-      )
-      sessionStore.setState((prev) => ({
-        ...prev,
-        attempts: prev.attempts + 1,
-        streak: 0,
-        lessonStreak: nextLessonStreak(prev, shown.id, false),
-      }))
+      if (state.exercise === "write") {
+        recordWritePrompt(true)
+        sessionStore.setState((prev) => ({
+          ...prev,
+          attempts: prev.attempts + 1,
+          streak: 0,
+        }))
+      } else {
+        const shown = requireKana(state.current.id)
+        recordAnswer(
+          {
+            kanaId: shown.id,
+            expected: shown.romaji,
+            typed: "",
+            correct: false,
+            confusedWith: null,
+            ms: Date.now() - state.shownAt,
+            sessionId: state.id,
+          },
+          settingsStore.state
+        )
+        sessionStore.setState((prev) => ({
+          ...prev,
+          attempts: prev.attempts + 1,
+          streak: 0,
+          lessonStreak: nextLessonStreak(prev, shown.id, false),
+        }))
+      }
     }
     advance()
-  }, [advance])
+  }, [advance, recordWritePrompt])
 
   const finish = useCallback(() => {
     // Judged before recordSessionResult raises the bar. The ≥5 floor mirrors
@@ -369,8 +605,8 @@ export function useDrill() {
       progression.track,
       lessonOf(progression, progression.track)
     )
-    return lessonPhase(lesson, charStats)
-  }, [progression, charStats])
+    return lessonPhase(lesson, mergeBestMastery(charStats, writeCharStats))
+  }, [progression, charStats, writeCharStats])
 
   /** Whether the run on this section is long enough to be visibly speeding up. */
   const pushingPace = useMemo(() => {
@@ -394,10 +630,16 @@ export function useDrill() {
     limitMs,
     activeGroup,
     pushingPace,
+    writeOutline,
     setInput,
     submit,
     skip,
     finish,
     restart,
+    markAssisted,
+    strokeCorrect,
+    strokeMistake,
+    completeWrite,
+    skipUnloadable,
   }
 }

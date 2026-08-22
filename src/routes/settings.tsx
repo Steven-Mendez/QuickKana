@@ -88,6 +88,40 @@ function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
+          {/* Reading and writing are both part of learning; either can be
+              turned off, but never both — the drill needs something to serve. */}
+          <Row
+            id="practice-reading"
+            title={t("settings.exerciseReadingTitle")}
+            description={t("settings.exerciseReadingDesc")}
+          >
+            <Switch
+              id="practice-reading"
+              checked={settings.practiceReading}
+              disabled={!settings.practiceWriting}
+              onCheckedChange={(checked) =>
+                updateSettings({ practiceReading: checked })
+              }
+            />
+          </Row>
+
+          <Row
+            id="practice-writing"
+            title={t("settings.exerciseWritingTitle")}
+            description={t("settings.exerciseWritingDesc")}
+          >
+            <Switch
+              id="practice-writing"
+              checked={settings.practiceWriting}
+              disabled={!settings.practiceReading}
+              onCheckedChange={(checked) =>
+                updateSettings({ practiceWriting: checked })
+              }
+            />
+          </Row>
+
+          <Separator />
+
           <Row
             id="accept-aliases"
             title={t("settings.aliasesTitle")}

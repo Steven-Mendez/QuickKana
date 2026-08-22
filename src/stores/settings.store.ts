@@ -3,6 +3,8 @@ import { STORAGE_KEYS, loadPersisted, persist } from "@/lib/storage"
 import type { Settings } from "@/lib/types"
 
 export const DEFAULT_SETTINGS: Settings = {
+  practiceReading: true,
+  practiceWriting: true,
   focusMode: true,
   activationThreshold: 2,
   graduationStreak: 4,

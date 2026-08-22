@@ -29,7 +29,6 @@ import { progressionStore } from "@/stores/progression.store"
 import { selectedIds, selectionStore } from "@/stores/selection.store"
 import { settingsStore } from "@/stores/settings.store"
 import { writingStore } from "@/stores/writing.store"
-import type { DrillMode } from "@/stores/progression.store"
 
 export const Route = createFileRoute("/stats")({ component: Stats })
 
@@ -44,12 +43,9 @@ function Stats() {
   const writing = useSelector(writingStore, (s) => s)
   const [onlySelected, setOnlySelected] = useState(false)
 
-  // Which drill's numbers the page shows. Starts on whatever the user is
-  // currently practicing. Confusion data only exists for reading, so the
-  // write view narrows the tabs down to the mastery map.
-  const [statsMode, setStatsMode] = useState<DrillMode>(
-    () => progressionStore.state.drillMode
-  )
+  // Which exercise's numbers the page shows. Confusion data only exists for
+  // reading, so the write view narrows the tabs down to the mastery map.
+  const [statsMode, setStatsMode] = useState<"read" | "write">("read")
   const [tab, setTab] = useState("mastery")
   const isWrite = statsMode === "write"
 
@@ -116,7 +112,7 @@ function Stats() {
         {/* Every figure below follows this switch. */}
         <Tabs
           value={statsMode}
-          onValueChange={(value) => setStatsMode(value as DrillMode)}
+          onValueChange={(value) => setStatsMode(value as "read" | "write")}
         >
           <TabsList aria-label={t("home.drillModeLabel")}>
             <TabsTrigger value="read">{t("home.tabRead")}</TabsTrigger>
@@ -161,15 +157,7 @@ function Stats() {
         />
         <Figure
           label={t("stats.bestStreak")}
-          value={
-            <NumberTicker
-              value={
-                isWrite
-                  ? writing.records.bestSessionStreak
-                  : progression.records.bestSessionStreak
-              }
-            />
-          }
+          value={<NumberTicker value={progression.records.bestSessionStreak} />}
           hint={
             progression.day.best > 0
               ? t("stats.recordDays", { count: progression.day.best })

@@ -6,11 +6,12 @@ import {
   useMotionValue,
   useReducedMotion,
 } from "motion/react"
-import { Check, Play, X } from "lucide-react"
+import { Check, FastForward, Play, X } from "lucide-react"
 import { Trans, useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { StreakCounter } from "@/components/drill-card"
 import { KanaWritingCanvas } from "@/components/kana-writing-canvas"
+import { WRITE_MAX_TRIES } from "@/hooks/use-drill"
 import { cn } from "@/lib/utils"
 import type { KanaWritingCanvasHandle } from "@/components/kana-writing-canvas"
 import type { Kana, SessionState, Settings } from "@/lib/types"
@@ -21,11 +22,12 @@ interface WriteDrillCardProps {
   settings: Settings
   /** Whether the current character is traced over a guide. */
   outline: boolean
-  /** Longest write streak ever, so a new record can be called out. */
+  /** Longest session streak ever, so a new record can be called out. */
   recordStreak: number
-  onCorrectStroke: () => void
-  onMistake: () => void
-  onComplete: (totalMistakes: number) => void
+  onCorrectStroke: (strokeNum: number) => void
+  /** Returns what to do after a wrong stroke: retry the character or fail. */
+  onMistake: () => "retry" | "failed"
+  onComplete: () => void
   /** The demo ran on this prompt — the attempt counts as assisted. */
   onAssist: () => void
   onLoadError: (char: string) => void
@@ -45,8 +47,10 @@ function useCanvasSize(): number {
 }
 
 /**
- * The Write drill's centre: rōmaji prompt where the reading drill shows the
- * kana, the tracing canvas where it has the input. Same chrome around both.
+ * The writing prompt: rōmaji where the reading drill shows the kana, the
+ * tracing canvas where it has the input. Three tries per character — a wrong
+ * stroke clears the canvas and costs one — with the same chrome around both
+ * drills.
  */
 export function WriteDrillCard({
   kana,
@@ -68,6 +72,16 @@ export function WriteDrillCard({
   const isCorrect = session.phase === "correct"
   const isMissed = session.phase === "retry"
   const promptKey = `${session.current?.id}-${session.shownAt}`
+
+  const [demoActive, setDemoActive] = useState(false)
+  const [failedTries, setFailedTries] = useState(0)
+  const failed = failedTries >= WRITE_MAX_TRIES
+
+  // Per-prompt UI state starts clean with each character.
+  useEffect(() => {
+    setFailedTries(0)
+    setDemoActive(false)
+  }, [promptKey])
 
   // First-ever sighting of a character: play the stroke-order demo once,
   // automatically. The ref keeps StrictMode's double effect (and re-renders
@@ -91,13 +105,12 @@ export function WriteDrillCard({
   // without ever remounting the canvas subtree (hanzi-writer owns it).
   const shakeX = useMotionValue(0)
   const popScale = useMotionValue(1)
-  const [mistakeTick, setMistakeTick] = useState(0)
 
   useEffect(() => {
-    if (mistakeTick === 0 || reducedMotion) return
+    if (failedTries === 0 || reducedMotion) return
     const shake = animate(shakeX, [0, -5, 5, -3, 0], { duration: 0.25 })
     return () => shake.stop()
-  }, [mistakeTick, reducedMotion, shakeX])
+  }, [failedTries, reducedMotion, shakeX])
 
   useEffect(() => {
     if (!isCorrect || reducedMotion) return
@@ -132,7 +145,7 @@ export function WriteDrillCard({
         </motion.div>
       </AnimatePresence>
 
-      <motion.div style={{ x: shakeX, scale: popScale }}>
+      <motion.div style={{ x: shakeX, scale: popScale }} className="relative">
         <KanaWritingCanvas
           ref={canvasRef}
           char={kana.char}
@@ -142,29 +155,63 @@ export function WriteDrillCard({
           highlightOnComplete={!reducedMotion}
           onCorrectStroke={onCorrectStroke}
           onMistake={() => {
-            setMistakeTick((tick) => tick + 1)
-            onMistake()
+            setFailedTries((tries) => tries + 1)
+            const action = onMistake()
+            if (action === "retry") canvasRef.current?.restartQuiz()
+            else canvasRef.current?.revealCharacter()
           }}
-          onComplete={({ totalMistakes }) => onComplete(totalMistakes)}
+          onComplete={onComplete}
           onLoadError={onLoadError}
+          onDemoStateChange={setDemoActive}
           ariaLabel={t("writeDrill.ariaCanvas", { romaji: kana.romaji })}
           className="rounded-xl border border-border/60"
         />
       </motion.div>
 
-      <div className="flex w-full flex-col items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={isCorrect || isMissed}
-          onClick={() => {
-            onAssist()
-            canvasRef.current?.showDemo()
-          }}
-        >
-          <Play className="size-3.5" />
-          {t("writeDrill.showMe")}
-        </Button>
+      {/* The three tries. Filled = still available. */}
+      <div
+        className="flex gap-1.5"
+        aria-label={t("writeDrill.triesLeft", {
+          count: Math.max(0, WRITE_MAX_TRIES - failedTries),
+        })}
+      >
+        {Array.from({ length: WRITE_MAX_TRIES }, (_, index) => (
+          <span
+            key={index}
+            className={cn(
+              "size-2 rounded-full transition-colors",
+              index < WRITE_MAX_TRIES - failedTries
+                ? "bg-primary"
+                : "bg-destructive/40"
+            )}
+          />
+        ))}
+      </div>
+
+      <div className="flex w-full flex-col items-center gap-1">
+        {demoActive ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => canvasRef.current?.skipDemo()}
+          >
+            <FastForward className="size-3.5" />
+            {t("writeDrill.skipDemo")}
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isCorrect || isMissed}
+            onClick={() => {
+              onAssist()
+              canvasRef.current?.showDemo()
+            }}
+          >
+            <Play className="size-3.5" />
+            {t("writeDrill.showMe")}
+          </Button>
+        )}
 
         {/* Reserved height: feedback must not shove the canvas around. */}
         <div className="h-5 text-sm">
@@ -180,7 +227,11 @@ export function WriteDrillCard({
             <span className="flex items-center gap-1.5 text-destructive">
               <X className="size-4" />
               <Trans
-                i18nKey="writeDrill.completedWithMistakes"
+                i18nKey={
+                  failed
+                    ? "writeDrill.itWas"
+                    : "writeDrill.completedWithMistakes"
+                }
                 components={{ jp: <span className="font-jp" lang="ja" /> }}
                 values={{ char: kana.char }}
               />

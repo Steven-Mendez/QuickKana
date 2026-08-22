@@ -107,8 +107,12 @@ export const es: typeof en = {
   },
   writeDrill: {
     showMe: "Muéstramelo",
+    skipDemo: "Saltar demo",
     watchStrokes: "mira el orden de los trazos",
     completedWithMistakes: "<jp>{{char}}</jp> — algunos trazos fallaron",
+    itWas: "Era <jp>{{char}}</jp>",
+    triesLeft_one: "{{count}} intento restante",
+    triesLeft_other: "{{count}} intentos restantes",
     ariaCanvas: "Traza el kana de {{romaji}}",
   },
   writePractice: {
@@ -280,9 +284,14 @@ export const es: typeof en = {
     paceTitle: "Acelerar cuando voy en racha",
     paceDesc:
       "Cuenta tu racha sobre los caracteres de la lección actual, no sobre el repaso. Tras {{floor}} pasada limpia toman más parte del drill, y con {{full}} la siguiente lección se desbloquea con menos repeticiones. Un fallo en ellos devuelve el ritmo normal.",
+    exerciseReadingTitle: "Ejercicios de lectura",
+    exerciseReadingDesc: "Ves el kana y escribes su rōmaji.",
+    exerciseWritingTitle: "Ejercicios de escritura",
+    exerciseWritingDesc:
+      "Ves el rōmaji y trazas el kana. Tres intentos por carácter — un trazo mal lo reinicia.",
     writingTitle: "Práctica de escritura",
     writingDesc:
-      "El drill de escritura muestra el rōmaji y tú trazas el kana trazo a trazo. El modo con tiempo no aplica al escribir.",
+      "Los ejercicios de escritura muestran el rōmaji y tú trazas el kana trazo a trazo. El progreso de ambos ejercicios cuenta para el mismo camino. El modo con tiempo no aplica al escribir.",
     alwaysOutlineTitle: "Mostrar siempre el contorno",
     alwaysOutlineDesc:
       "Mantén la guía de trazado incluso en caracteres que ya dominas en escritura.",

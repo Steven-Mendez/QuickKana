@@ -1,11 +1,12 @@
 import { createStore } from "@tanstack/store"
-import type { Pick, SessionState } from "@/lib/types"
+import type { ExerciseType, Pick, SessionState } from "@/lib/types"
 
 /** Ephemeral by design — a reload starts a fresh session, stats persist. */
 const newSession = (): SessionState => ({
   id: `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
   startedAt: Date.now(),
   current: null,
+  exercise: "read",
   shownAt: Date.now(),
   input: "",
   phase: "prompt",
@@ -36,11 +37,13 @@ export const setInput = (input: string) =>
 export const showPick = (
   pick: Pick | null,
   introducing = false,
+  exercise: ExerciseType = "read",
   now = Date.now()
 ) =>
   sessionStore.setState((prev) => ({
     ...prev,
     current: pick,
+    exercise,
     shownAt: now,
     input: "",
     phase: "prompt",

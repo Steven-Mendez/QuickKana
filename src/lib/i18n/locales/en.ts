@@ -109,8 +109,12 @@ export const en = {
   },
   writeDrill: {
     showMe: "Show me",
+    skipDemo: "Skip demo",
     watchStrokes: "watch the stroke order",
     completedWithMistakes: "<jp>{{char}}</jp> — some strokes were off",
+    itWas: "It was <jp>{{char}}</jp>",
+    triesLeft_one: "{{count}} try left",
+    triesLeft_other: "{{count}} tries left",
     ariaCanvas: "Trace the kana for {{romaji}}",
   },
   writePractice: {
@@ -282,9 +286,14 @@ export const en = {
     paceTitle: "Speed up when I'm on a roll",
     paceDesc:
       "Counts your run on the current lesson's own characters, not on review. After {{floor}} clean pass through them they take a bigger share of the drill, and by {{full}} the next lesson unlocks on fewer repetitions. One mistake on them puts the normal pace back.",
+    exerciseReadingTitle: "Reading exercises",
+    exerciseReadingDesc: "See the kana, type its rōmaji.",
+    exerciseWritingTitle: "Writing exercises",
+    exerciseWritingDesc:
+      "See the rōmaji, trace the kana. Three tries per character — a wrong stroke starts it over.",
     writingTitle: "Writing practice",
     writingDesc:
-      "The Write drill shows the rōmaji and you trace the kana stroke by stroke. Timed mode doesn't apply while writing.",
+      "Writing prompts show the rōmaji and you trace the kana stroke by stroke. Progress from either exercise counts toward the same journey. Timed mode doesn't apply while writing.",
     alwaysOutlineTitle: "Always show outline",
     alwaysOutlineDesc:
       "Keep the tracing guide even on characters you've mastered in writing.",

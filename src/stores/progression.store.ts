@@ -15,14 +15,9 @@ import type { CharStat, Script } from "@/lib/types"
 /** Free selection, or the guided climb through one syllabary's curriculum. */
 export type PracticeMode = "free" | "journey"
 
-/** Reading (kana → typed rōmaji) or writing (rōmaji → traced kana). */
-export type DrillMode = "read" | "write"
-
 export interface ProgressionState {
   version: 1
   mode: PracticeMode
-  /** Which drill the practice screen runs. Orthogonal to `mode`. */
-  drillMode: DrillMode
   /** Which curriculum the guided mode is currently drilling. */
   track: Script
   /** Lesson being introduced, per track — the two never gate each other. */
@@ -37,8 +32,6 @@ export interface ProgressionState {
 const initial = (): ProgressionState => ({
   version: 1,
   mode: "journey",
-  // Saves from before the Write mode simply lack the key and land on "read".
-  drillMode: "read",
   track: "hiragana",
   lessons: { hiragana: 0, katakana: 0 },
   unlockedAt: {},
@@ -103,9 +96,6 @@ persist(progressionStore, STORAGE_KEYS.progression)
 
 export const setMode = (mode: PracticeMode) =>
   progressionStore.setState((prev) => ({ ...prev, mode }))
-
-export const setDrillMode = (drillMode: DrillMode) =>
-  progressionStore.setState((prev) => ({ ...prev, drillMode }))
 
 export const setTrack = (track: Script) =>
   progressionStore.setState((prev) => ({ ...prev, track }))
@@ -243,6 +233,5 @@ export const resetProgression = () =>
   progressionStore.setState((prev) => ({
     ...initial(),
     mode: prev.mode,
-    drillMode: prev.drillMode,
     track: prev.track,
   }))

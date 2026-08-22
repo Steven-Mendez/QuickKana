@@ -158,6 +158,28 @@ export function mastery(
 }
 
 /**
+ * Reading and writing keep separate per-character stats, but the journey's
+ * gates judge "do you know this character" — and tracing き from memory is at
+ * least as much evidence as typing "ki". For each character this takes
+ * whichever track shows the higher mastery, so practicing either exercise
+ * moves the same journey instead of writing feeling like it counts for
+ * nothing.
+ */
+export function mergeBestMastery(
+  read: Record<string, CharStat>,
+  write: Record<string, CharStat>
+): Record<string, CharStat> {
+  const merged = { ...read }
+  for (const [id, writeStat] of Object.entries(write)) {
+    const readStat = merged[id]
+    if (!readStat || (mastery(writeStat) ?? 0) > (mastery(readStat) ?? 0)) {
+      merged[id] = writeStat
+    }
+  }
+  return merged
+}
+
+/**
  * Average mastery across the whole syllabary — never-drilled kana count as
  * zero, so this is "how much of the kana do I know", not "how well am I doing
  * on what I happen to have practised".
