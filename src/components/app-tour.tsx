@@ -56,11 +56,14 @@ export function AppTourProvider({ children }: { children: React.ReactNode }) {
 /**
  * Rendered by the home route: opens the tour once per browser, ever. A full
  * data reset wipes the flag (same `qk:` prefix), which re-arms it on purpose.
+ * Waits for the welcome dialog to be done — that flow launches the tour
+ * itself; this only covers a reload between welcome and tour.
  */
 export function TourAutoLauncher() {
   const { setIsOpen } = useTour()
 
   useEffect(() => {
+    if (!loadPersisted<boolean>(STORAGE_KEYS.welcomeSeen, false)) return
     if (loadPersisted<boolean>(STORAGE_KEYS.tourSeen, false)) return
     // Next frame, so every data-tour anchor exists before the mask measures.
     const frame = requestAnimationFrame(() => setIsOpen(true))

@@ -8,6 +8,8 @@ export const STORAGE_KEYS = {
   history: `${PREFIX}v1:history`,
   /** One-shot flag, not a preference: the onboarding tour was dismissed once. */
   tourSeen: `${PREFIX}v1:tour-seen`,
+  /** One-shot flag: the first-run welcome (language pick + intro) was completed. */
+  welcomeSeen: `${PREFIX}v1:welcome-seen`,
   /** Kept outside the versioned namespace so the anti-FOUC script can read it. */
   theme: `${PREFIX}theme`,
   /** Resolved language ("en"/"es"), mirrored for the pre-paint <html lang> script. */

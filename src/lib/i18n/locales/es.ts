@@ -294,6 +294,23 @@ export const es: typeof en = {
     cancel: "Cancelar",
     confirm: "Sí, borrar todo",
   },
+  welcome: {
+    title: "Te damos la bienvenida a QuickKana",
+    subtitle:
+      "Aprende a leer hiragana y katakana escribiendo — unos minutos al día.",
+    featureJourneyTitle: "Un camino guiado",
+    featureJourneyDesc:
+      "Lecciones cortas presentan pocos caracteres a la vez y se desbloquean según los dominas.",
+    featureConfusionTitle: "Aprende qué confundes",
+    featureConfusionDesc:
+      "Los caracteres que confundes se entrenan uno contra otro hasta que los distingas.",
+    featurePaceTitle: "Un ritmo que se adapta",
+    featurePaceDesc:
+      "Cuando vas en racha, acelera; cuando fallas, frena y repasa.",
+    startTour: "Enséñame la app",
+    skip: "Ir directo a practicar",
+    replay: "Repetir la introducción",
+  },
   tour: {
     step1:
       "Dos formas de practicar: el Camino te lleva por el silabario lección a lección, la Selección libre entrena exactamente los caracteres que elijas.",

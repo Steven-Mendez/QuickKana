@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useSelector } from "@tanstack/react-store"
 import { useTranslation } from "react-i18next"
 
@@ -25,6 +25,7 @@ import { TRACKS, lessonAt } from "@/lib/journey"
 import { PASSES_FLOOR, PASSES_FULL } from "@/lib/momentum"
 import { MIN_TIME_LIMIT } from "@/lib/pressure"
 import { SCRIPTS, SCRIPT_LABELS } from "@/lib/kana"
+import { STORAGE_KEYS, savePersisted } from "@/lib/storage"
 import { useLanguage } from "@/hooks/use-language"
 import { useTheme } from "@/hooks/use-theme"
 import {
@@ -60,6 +61,14 @@ function SettingsPage() {
   const settings = useSelector(settingsStore, (s) => s)
   const { theme, setTheme } = useTheme()
   const { language, setLanguage } = useLanguage()
+  const navigate = useNavigate()
+
+  const replayOnboarding = () => {
+    // Re-arm both one-shot flags; the home route opens the welcome on mount.
+    savePersisted(STORAGE_KEYS.welcomeSeen, false)
+    savePersisted(STORAGE_KEYS.tourSeen, false)
+    void navigate({ to: "/" })
+  }
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
@@ -395,6 +404,9 @@ function SettingsPage() {
           <CardDescription>{t("settings.dataDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={replayOnboarding}>
+            {t("welcome.replay")}
+          </Button>
           <Button
             variant="outline"
             onClick={() =>

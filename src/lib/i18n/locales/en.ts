@@ -296,6 +296,23 @@ export const en = {
     cancel: "Cancel",
     confirm: "Yes, reset all",
   },
+  welcome: {
+    title: "Welcome to QuickKana",
+    subtitle:
+      "Learn to read hiragana and katakana by typing — a few minutes a day.",
+    featureJourneyTitle: "A guided journey",
+    featureJourneyDesc:
+      "Short lessons introduce a few characters at a time and unlock as you master them.",
+    featureConfusionTitle: "It learns what you mix up",
+    featureConfusionDesc:
+      "Characters you confuse get drilled against each other until you tell them apart.",
+    featurePaceTitle: "A pace that adapts",
+    featurePaceDesc:
+      "On a roll, things speed up; when you slip, it slows down and reviews.",
+    startTour: "Show me around",
+    skip: "Jump right in",
+    replay: "Replay the intro",
+  },
   tour: {
     step1:
       "Two ways to practice: Journey walks you through the syllabary lesson by lesson, Free selection drills exactly the characters you pick.",

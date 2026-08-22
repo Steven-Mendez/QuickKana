@@ -7,6 +7,7 @@ import { Flame, Play, Target, Trophy } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TourAutoLauncher } from "@/components/app-tour"
+import { WelcomeDialog } from "@/components/welcome-dialog"
 import { JourneyPanel } from "@/components/journey-panel"
 import { KanaSelector } from "@/components/kana-selector"
 import { activeGroups } from "@/lib/confusion"
@@ -45,6 +46,7 @@ function Home() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 pt-8 pb-28">
+      <WelcomeDialog />
       <TourAutoLauncher />
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="space-y-1">
