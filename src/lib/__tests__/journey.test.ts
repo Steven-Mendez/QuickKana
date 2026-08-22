@@ -6,6 +6,7 @@ import {
   lastLessonOf,
   lessonAt,
   lessonById,
+  lessonPhase,
   lessonProgress,
   poolUpTo,
   trackProgress,
@@ -145,6 +146,44 @@ describe("lesson completion", () => {
     // 50% accuracy is below the mastery bar no matter how much exposure.
     expect(LESSON_MASTERY).toBeGreaterThan(0.5)
     expect(isLessonComplete(lesson, sloppy)).toBe(false)
+  })
+})
+
+describe("lessonPhase", () => {
+  const lesson = lessonAt("hiragana", 0)
+
+  /** Every character of the lesson with the same record. */
+  const lessonStats = (attempts: number, correct: number) =>
+    Object.fromEntries(
+      lesson.ids.map((id) => [id, { ...emptyCharStat(), attempts, correct }])
+    ) as Record<string, CharStat>
+
+  it("starts a fresh lesson in focus", () => {
+    expect(lessonPhase(lesson, {})).toBe("focus")
+  })
+
+  it("stays in focus until every character has enough clean sightings", () => {
+    // Two right out of two is encouraging but not yet three sightings.
+    expect(lessonPhase(lesson, lessonStats(2, 2))).toBe("focus")
+    // Two out of three misses the accuracy bar.
+    expect(lessonPhase(lesson, lessonStats(3, 2))).toBe("focus")
+    expect(lessonPhase(lesson, lessonStats(3, 3))).toBe("mix")
+    // Three out of four sits exactly on the bar.
+    expect(lessonPhase(lesson, lessonStats(4, 3))).toBe("mix")
+  })
+
+  it("holds the whole lesson back for a single unfamiliar character", () => {
+    const stats = lessonStats(3, 3)
+    stats[lesson.ids[0] as string] = {
+      ...emptyCharStat(),
+      attempts: 1,
+      correct: 1,
+    }
+    expect(lessonPhase(lesson, stats)).toBe("focus")
+  })
+
+  it("falls back to focus when a character collapses during review", () => {
+    expect(lessonPhase(lesson, lessonStats(8, 4))).toBe("focus")
   })
 })
 

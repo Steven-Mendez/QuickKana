@@ -7,8 +7,8 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { DrillCard } from "@/components/drill-card"
 import { SessionSummary } from "@/components/session-summary"
 import { useDrill } from "@/hooks/use-drill"
-import { lessonById } from "@/lib/journey"
-import { progressionStore } from "@/stores/progression.store"
+import { lessonAt, lessonById } from "@/lib/journey"
+import { lessonOf, progressionStore } from "@/stores/progression.store"
 import { formatPercent } from "@/lib/stats"
 import { cn } from "@/lib/utils"
 
@@ -21,11 +21,13 @@ function Practice() {
   const {
     session,
     settings,
+    progression,
     kana,
     pool,
     limitMs,
     activeGroup,
     pushingPace,
+    journeyPhase,
     setInput,
     submit,
     skip,
@@ -66,6 +68,13 @@ function Practice() {
 
   const justUnlocked = session.unlocked[session.unlocked.length - 1]
 
+  // While a new section is being introduced the pool is that section alone, and
+  // the footer says so — otherwise the sudden absence of review looks broken.
+  const focusLesson =
+    journeyPhase === "focus" && progression.mode === "journey"
+      ? lessonAt(progression.track, lessonOf(progression, progression.track))
+      : null
+
   const accuracy = session.attempts > 0 ? session.correct / session.attempts : 0
 
   return (
@@ -104,6 +113,9 @@ function Practice() {
             value={session.attempts > 0 ? formatPercent(accuracy) : "—"}
           />
           <Metric label="Best streak" value={String(session.bestStreak)} />
+          {focusLesson && (
+            <Metric label="Learning" value={focusLesson.label} highlight />
+          )}
         </div>
 
         <div className="hidden lg:block">

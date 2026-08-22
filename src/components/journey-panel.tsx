@@ -10,6 +10,7 @@ import {
   isMastered,
   lastLessonOf,
   lessonAt,
+  lessonPhase,
   lessonProgress,
   retention,
   trackProgress,
@@ -97,7 +98,9 @@ export function JourneyPanel() {
         <p className="mt-4 text-xs text-muted-foreground">
           {finished
             ? "You've completed this syllabary. Reviews keep using your mistakes to pick what shows up."
-            : "Master these characters and keep the earlier ones fresh, and the next lesson unlocks."}
+            : lessonPhase(current, charStats) === "focus"
+              ? "First, learn these new characters on their own — reviews come back once you can read each one."
+              : "Master these characters and keep the earlier ones fresh, and the next lesson unlocks."}
         </p>
       </section>
 

@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo } from "react"
 import { useSelector } from "@tanstack/react-store"
 import { getKana, requireKana, resolveTyped } from "@/lib/kana"
 import { isCorrect } from "@/lib/kana/romaji"
-import { isLessonComplete, lessonAt, poolUpTo, retention } from "@/lib/journey"
+import { lessonAt, lessonPhase, poolUpTo } from "@/lib/journey"
+import { guidedPool } from "@/lib/drill-pool"
 import { timeLimitFor } from "@/lib/pressure"
-import { LESSON_BOOST_MAX, isPushingPace, lessonBoost } from "@/lib/momentum"
+import { isPushingPace } from "@/lib/momentum"
 import { nextKana } from "@/lib/scheduler"
 import {
   advanceLesson,
@@ -42,19 +43,9 @@ function currentLesson(): Lesson | null {
 }
 
 /**
- * What the drill draws from. In guided mode the pool is everything unlocked so
- * far, with the current lesson weighted up; in free mode it is exactly what the
- * user ticked in the selector.
- *
- * `lessonStreak` decides how hard that lesson is weighted: the better the user
- * is doing *on the new characters*, the less of the session is spent
- * re-confirming the ones already answered right a dozen times over.
- *
- * Once the section is learned the weight moves to whatever review has slipped,
- * because that is now the only thing standing between the user and the next
- * lesson. Without this the drill would spend its boost drilling five kana that
- * are already mastered while the characters actually blocking the unlock
- * surfaced once every forty prompts.
+ * What the drill draws from. In guided mode that is `guidedPool` — the new
+ * section alone while it is being met, the whole unlocked pool once it is
+ * familiar; in free mode it is exactly what the user ticked in the selector.
  */
 function currentPool(lessonStreak: number): {
   ids: Array<string>
@@ -64,21 +55,12 @@ function currentPool(lessonStreak: number): {
   const lesson = currentLesson()
   if (!lesson) return { ids: selectedIds(selectionStore.state) }
 
-  const { charStats } = progressStore.state
-  const ids = poolUpTo(progression.track, lesson.index)
-  const blocking = isLessonComplete(lesson, charStats)
-    ? retention(progression.track, lesson.index, charStats).slipped
-    : []
-
-  return {
-    ids,
-    boost: blocking.length
-      ? { ids: new Set(blocking), factor: LESSON_BOOST_MAX }
-      : {
-          ids: new Set(lesson.ids),
-          factor: lessonBoost(lessonStreak, lesson.ids.length),
-        },
-  }
+  return guidedPool(
+    progression.track,
+    lesson.index,
+    progressStore.state.charStats,
+    lessonStreak
+  )
 }
 
 /**
@@ -115,7 +97,10 @@ export function useDrill() {
   const settings = useSelector(settingsStore, (s) => s)
   const selection = useSelector(selectionStore, (s) => s)
   const progression = useSelector(progressionStore, (s) => s)
+  const charStats = useSelector(progressStore, (s) => s.charStats)
 
+  // Only practice.tsx's empty-pool check reads this, so the cumulative pool is
+  // fine even during focus — a lesson never has fewer than three characters.
   const pool = useMemo(
     () =>
       progression.mode === "journey"
@@ -189,6 +174,11 @@ export function useDrill() {
       touchDay()
     }
 
+    const lesson = currentLesson()
+    const phaseBefore = lesson
+      ? lessonPhase(lesson, progressStore.state.charStats)
+      : null
+
     const { graduated } = recordAnswer(
       {
         kanaId: shown.id,
@@ -202,9 +192,22 @@ export function useDrill() {
       settingsStore.state
     )
 
+    // This answer may have been the one that made the whole section familiar,
+    // ending the focus phase. The streak earned there was earned against a
+    // pool with no distractors, which says nothing about the mixed pool the
+    // gate is about to be judged on — carrying it over would let the momentum
+    // discount unlock the next lesson on the very answer that ends focus,
+    // skipping review entirely.
+    const enteredMix =
+      lesson !== null &&
+      phaseBefore === "focus" &&
+      lessonPhase(lesson, progressStore.state.charStats) === "mix"
+
     // Computed before the state below is written: the unlock has to be judged
     // on the streak this answer just extended, not the stale one.
-    const lessonStreak = nextLessonStreak(state, shown.id, correct)
+    const lessonStreak = enteredMix
+      ? 0
+      : nextLessonStreak(state, shown.id, correct)
 
     // A mastered lesson only unlocks the next one on a correct answer, which
     // is the only moment mastery can have gone up.
@@ -340,15 +343,27 @@ export function useDrill() {
     return progressStore.state.groups[session.current.source.groupId] ?? null
   }, [session.current])
 
+  /** Which phase the current lesson is in, or `null` outside guided mode. */
+  const journeyPhase = useMemo(() => {
+    if (progression.mode !== "journey") return null
+    const lesson = lessonAt(
+      progression.track,
+      lessonOf(progression, progression.track)
+    )
+    return lessonPhase(lesson, charStats)
+  }, [progression, charStats])
+
   /** Whether the run on this section is long enough to be visibly speeding up. */
   const pushingPace = useMemo(() => {
-    if (!settings.adaptivePace || progression.mode !== "journey") return false
+    // Only meaningful in mix: during focus the boost the pace hint describes
+    // is not operating at all.
+    if (!settings.adaptivePace || journeyPhase !== "mix") return false
     const lesson = lessonAt(
       progression.track,
       lessonOf(progression, progression.track)
     )
     return isPushingPace(session.lessonStreak, lesson.ids.length)
-  }, [settings.adaptivePace, progression, session.lessonStreak])
+  }, [settings.adaptivePace, progression, journeyPhase, session.lessonStreak])
 
   return {
     session,
@@ -356,6 +371,7 @@ export function useDrill() {
     progression,
     kana,
     pool,
+    journeyPhase,
     limitMs,
     activeGroup,
     pushingPace,

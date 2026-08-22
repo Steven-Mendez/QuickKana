@@ -133,6 +133,21 @@ describe("advanceLesson", () => {
     expect(advanceLesson("hiragana", stats)).toBe(TRACKS.hiragana[6]?.id)
   })
 
+  it("does not unlock on the answer that ends focus, only after mixed review", () => {
+    setLesson("hiragana", 1)
+    const lesson = lessonAt("hiragana", 1)
+    const earlier = poolUpTo("hiragana", 0)
+
+    // The moment focus ends: three clean sightings each, streak reset to zero.
+    // Familiar is not mastered — mix has to earn the unlock with real exposure.
+    const familiar = { ...mastered(earlier), ...clean(lesson.ids, 3) }
+    expect(advanceLesson("hiragana", familiar, 0)).toBeNull()
+    expect(progressionStore.state.lessons.hiragana).toBe(1)
+
+    const reviewed = { ...mastered(earlier), ...mastered(lesson.ids) }
+    expect(advanceLesson("hiragana", reviewed, 0)).toBe(TRACKS.hiragana[2]?.id)
+  })
+
   it("never unlocks a lesson the user is actually missing, streak or not", () => {
     const lesson = lessonAt("katakana", 0)
     const shaky = Object.fromEntries(

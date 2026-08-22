@@ -103,6 +103,33 @@ export const lessonAt = (script: Script, index: number): Lesson =>
   TRACKS[script][Math.max(0, Math.min(lastLessonOf(script), index))] as Lesson
 
 /**
+ * Sightings a character needs before its lesson graduates from "focus" — the
+ * introduction phase where the drill shows nothing but the new section — into
+ * "mix", where the whole unlocked pool comes back for review.
+ *
+ * Same accuracy bar as everything else (`LESSON_MASTERY`), just less exposure:
+ * three sightings is enough to tell "roughly knows it" from a lucky guess.
+ * Numerically equal to `MASTERY_ATTEMPTS_FLOOR` in momentum.ts, but kept
+ * separate on purpose — familiarity and the momentum discount are different
+ * ideas that happen to land on the same number.
+ */
+export const FAMILIARITY_ATTEMPTS = 3
+
+export type LessonPhase = "focus" | "mix"
+
+/**
+ * Which phase the current lesson is in, derived from the persisted stats
+ * rather than stored anywhere: the phase survives reloads for free, and if a
+ * new character collapses during review the drill narrows back to it on its
+ * own.
+ */
+export const lessonPhase = (
+  lesson: Lesson,
+  charStats: Record<string, CharStat>
+): LessonPhase =>
+  isLessonComplete(lesson, charStats, FAMILIARITY_ATTEMPTS) ? "mix" : "focus"
+
+/**
  * Everything unlocked so far in one track. Old lessons stay in the pool on
  * purpose: the point of the guided mode is that あ keeps showing up while you
  * learn ら, so nothing quietly rots while you move forward.
