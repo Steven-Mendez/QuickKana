@@ -47,6 +47,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      hanzi-writer:
+        specifier: ^3.7.3
+        version: 3.7.3
       howler:
         specifier: ^2.2.4
         version: 2.2.4
@@ -2143,6 +2146,9 @@ packages:
     peerDependenciesMeta:
       crossws:
         optional: true
+
+  hanzi-writer@3.7.3:
+    resolution: {integrity: sha512-fdOFrb1cXWL/pV/oplJkcdziCvjJzhhf+qoIBm5IpVGxPBZEu4eLB6ZG5RJDbKXyNbNlyx8oIpa3XrcUBcSXpg==}
 
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
@@ -5650,6 +5656,8 @@ snapshots:
     dependencies:
       rou3: 0.8.1
       srvx: 0.11.22
+
+  hanzi-writer@3.7.3: {}
 
   has-flag@4.0.0: {}
 
