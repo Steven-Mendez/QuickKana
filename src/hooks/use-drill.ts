@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSelector } from "@tanstack/react-store"
 import { getKana, requireKana, resolveTyped } from "@/lib/kana"
 import { isCorrect } from "@/lib/kana/romaji"
-import { writableIds } from "@/lib/kana/strokes"
-import { isMastered, lessonAt, lessonPhase, poolUpTo } from "@/lib/journey"
+import { isWritable, writableIds } from "@/lib/kana/strokes"
+import { needsOutline } from "@/lib/writing"
+import { lessonAt, lessonPhase, poolUpTo } from "@/lib/journey"
 import { guidedPool } from "@/lib/drill-pool"
 import { milestoneAt, timeLimitFor } from "@/lib/pressure"
 import { isPushingPace } from "@/lib/momentum"
@@ -72,6 +73,66 @@ const gateStats = () =>
     writingStore.state.charStats
   )
 
+/** Read sightings a lesson character needs before its lesson can pass. */
+const MIN_READ_SEEN = 2
+
+/**
+ * The extra per-character veto on the lesson gate. With both exercise types
+ * on, mastery alone is not enough to pass a lesson: each character must have
+ * been read (recognized) at least a couple of times AND written cleanly from
+ * memory — without the outline — at least once. Tracing over the guide never
+ * satisfies it; with "always show outline" forced on, a clean guided write
+ * counts instead, because memory attempts can then never happen.
+ */
+function charReadyForUnlock(id: string): boolean {
+  const config = settingsStore.state
+  if (!config.practiceReading || !config.practiceWriting) return true
+
+  const readSeen = progressStore.state.charStats[id]?.attempts ?? 0
+  if (readSeen < MIN_READ_SEEN) return false
+
+  const kana = getKana(id)
+  if (!kana || !isWritable(kana)) return true
+
+  const writeStat = writingStore.state.charStats[id]
+  const written = config.writeAlwaysOutline
+    ? (writeStat?.correct ?? 0)
+    : (writeStat?.memoryCorrect ?? 0)
+  return written >= 1
+}
+
+/**
+ * Ends the session and stamps its results. Module-level (not hook-bound)
+ * because `advance` also ends the session when the pomodoro clock runs out.
+ */
+function finishSession() {
+  // Judged before recordSessionResult raises the bar. The ≥5 floor mirrors
+  // the drill's record badge: beating a zero record is not an achievement.
+  const { bestStreak } = sessionStore.state
+  const newRecord =
+    bestStreak >= 5 &&
+    bestStreak > progressionStore.state.records.bestSessionStreak
+  sessionStore.setState((prev) => ({ ...prev, newRecord }))
+
+  recordSessionResult(sessionStore.state)
+  endSession()
+  playEffect("sessionEnd")
+}
+
+/**
+ * When the pomodoro clock has run out. Checked at prompt boundaries, so the
+ * character being answered always gets resolved before the summary appears.
+ */
+function sessionTimeUp(): boolean {
+  const config = settingsStore.state
+  const state = sessionStore.state
+  return (
+    config.sessionLimitEnabled &&
+    state.attempts > 0 &&
+    Date.now() - state.startedAt >= config.sessionMinutes * 60_000
+  )
+}
+
 /**
  * What the drill draws from. In guided mode that is `guidedPool` — the new
  * section alone while it is being met, the whole unlocked pool once it is
@@ -124,12 +185,16 @@ function nextLessonStreak(
  * character from that exercise's own adaptive stats.
  *
  * Reading keeps everything it always had — confusion bursts, lesson pacing,
- * the timed mode, unlocks. Writing deliberately reuses none of those: bursts
- * and pairing are typing concepts, a clock over handwriting punishes careful
- * strokes, and lessons unlock on reading mastery. What writing brings is its
- * own scoring (see lib/writing.ts) and the three-tries rule: a wrong stroke
- * restarts the character, and the third wrong stroke fails it and reveals
- * the answer.
+ * the timed mode. Writing deliberately reuses none of those: bursts and
+ * pairing are typing concepts, and a clock over handwriting punishes careful
+ * strokes. What writing brings is its own scoring (see lib/writing.ts) and
+ * the three-tries rule: a wrong stroke restarts the character, and the third
+ * wrong stroke fails it and reveals the answer.
+ *
+ * Both exercises move the same journey: gates are judged on the merged
+ * best-of-both stats, and — when both types are on — a lesson only passes
+ * once each character was also read a couple of times and written cleanly
+ * from memory (see `charReadyForUnlock`).
  */
 export function useDrill() {
   const session = useSelector(sessionStore, (s) => s)
@@ -163,6 +228,13 @@ export function useDrill() {
   const [writeOutline, setWriteOutline] = useState(true)
 
   const advance = useCallback(() => {
+    // The pomodoro boundary: instead of serving another character, close the
+    // session — the summary is the break.
+    if (sessionTimeUp()) {
+      finishSession()
+      return
+    }
+
     const state = sessionStore.state
     const config = settingsStore.state
     const { ids, boost } = currentPool(pacingStreak(state.lessonStreak))
@@ -191,7 +263,7 @@ export function useDrill() {
       const introducing =
         !!pick && (writingStore.state.charStats[pick.id]?.attempts ?? 0) === 0
       const stat = pick ? writingStore.state.charStats[pick.id] : undefined
-      const outline = config.writeAlwaysOutline || !isMastered(stat)
+      const outline = config.writeAlwaysOutline || needsOutline(stat)
 
       writePrompt.current = { mistakes: 0, assisted: false, outline }
       setWriteOutline(outline)
@@ -305,7 +377,9 @@ export function useDrill() {
         ? advanceLesson(
             progressionStore.state.track,
             gateStats(),
-            pacingStreak(lessonStreak)
+            pacingStreak(lessonStreak),
+            Date.now(),
+            charReadyForUnlock
           )
         : null
 
@@ -497,7 +571,9 @@ export function useDrill() {
         ? advanceLesson(
             progressionStore.state.track,
             gateStats(),
-            pacingStreak(lessonStreak)
+            pacingStreak(lessonStreak),
+            Date.now(),
+            charReadyForUnlock
           )
         : null
 
@@ -575,17 +651,7 @@ export function useDrill() {
   }, [advance, recordWritePrompt])
 
   const finish = useCallback(() => {
-    // Judged before recordSessionResult raises the bar. The ≥5 floor mirrors
-    // the drill's record badge: beating a zero record is not an achievement.
-    const { bestStreak } = sessionStore.state
-    const newRecord =
-      bestStreak >= 5 &&
-      bestStreak > progressionStore.state.records.bestSessionStreak
-    sessionStore.setState((prev) => ({ ...prev, newRecord }))
-
-    recordSessionResult(sessionStore.state)
-    endSession()
-    playEffect("sessionEnd")
+    finishSession()
   }, [])
 
   const restart = useCallback(() => {

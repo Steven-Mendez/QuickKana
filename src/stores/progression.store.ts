@@ -186,12 +186,18 @@ export function recordSessionResult(session: {
  * have to be. A user reading the section faultlessly has already produced the
  * evidence that quota was there to collect, and making them grind it out
  * anyway is how a track stalls on characters they know.
+ *
+ * `isCharReady` is an extra per-character veto on the lesson's own ids, on
+ * top of the mastery bar. The drill uses it to demand exposure in both
+ * exercise types when both are on: however well you read a section, it isn't
+ * passed until you've also written it.
  */
 export function advanceLesson(
   script: Script,
   charStats: Record<string, CharStat>,
   streak = 0,
-  now = Date.now()
+  now = Date.now(),
+  isCharReady: (id: string) => boolean = () => true
 ): string | null {
   const state = progressionStore.state
   const current = lessonOf(state, script)
@@ -207,6 +213,8 @@ export function advanceLesson(
   ) {
     return null
   }
+
+  if (!lesson.ids.every(isCharReady)) return null
 
   if (!holdsUp(retention(script, current, charStats))) return null
 

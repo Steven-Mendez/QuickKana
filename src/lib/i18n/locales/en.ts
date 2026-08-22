@@ -129,6 +129,7 @@ export const en = {
     accuracy: "Accuracy",
     bestStreak: "Best streak",
     learning: "Learning",
+    timeLeft: "Time",
     confirm: "confirm",
     end: "end",
     skip: "Skip",
@@ -286,6 +287,10 @@ export const en = {
     paceTitle: "Speed up when I'm on a roll",
     paceDesc:
       "Counts your run on the current lesson's own characters, not on review. After {{floor}} clean pass through them they take a bigger share of the drill, and by {{full}} the next lesson unlocks on fewer repetitions. One mistake on them puts the normal pace back.",
+    sessionLimitTitle: "Timed sessions (pomodoro)",
+    sessionLimitDesc:
+      "The session ends on its own and shows your summary — short bursts beat an endless grind. Turn off for an open-ended session.",
+    sessionMinutes: "Session length",
     exerciseReadingTitle: "Reading exercises",
     exerciseReadingDesc: "See the kana, type its rōmaji.",
     exerciseWritingTitle: "Writing exercises",
@@ -293,10 +298,10 @@ export const en = {
       "See the rōmaji, trace the kana. Three tries per character — a wrong stroke starts it over.",
     writingTitle: "Writing practice",
     writingDesc:
-      "Writing prompts show the rōmaji and you trace the kana stroke by stroke. Progress from either exercise counts toward the same journey. Timed mode doesn't apply while writing.",
+      "Writing prompts show the rōmaji and you trace the kana stroke by stroke. Both exercises count toward the same journey — and with both on, a lesson only passes once you've read each character and written it from memory, without the outline. Timed mode doesn't apply while writing.",
     alwaysOutlineTitle: "Always show outline",
     alwaysOutlineDesc:
-      "Keep the tracing guide even on characters you've mastered in writing.",
+      "Keep the tracing guide on every character. Normally it goes away after a couple of clean traces so you can write from memory.",
     leniencyLabel: "Stroke leniency",
     leniencyDesc:
       "How forgiving stroke grading is. Higher helps when tracing with a mouse or a finger.",

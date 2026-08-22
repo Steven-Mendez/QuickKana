@@ -1,8 +1,12 @@
 import { createStore } from "@tanstack/store"
 import { STORAGE_KEYS, loadPersisted, persist } from "@/lib/storage"
-import { applyWriteAttempt, emptyWriteCharStat, scoreWriteAttempt } from "@/lib/writing"
+import {
+  applyWriteAttempt,
+  emptyWriteCharStat,
+  scoreWriteAttempt,
+} from "@/lib/writing"
 import type { WriteAttempt } from "@/lib/writing"
-import type { ProgressState, WritingState } from "@/lib/types"
+import type { ProgressState, WriteCharStat, WritingState } from "@/lib/types"
 
 /**
  * The Write mode's persisted progress. Deliberately its own store under its
@@ -27,10 +31,18 @@ const stored = loadPersisted<Partial<WritingState>>(
 )
 
 // Merged over the defaults so a field added in a later version simply appears
-// with its default instead of coming back `undefined`.
+// with its default instead of coming back `undefined` — including fields
+// added to the per-character stats, which are backfilled one by one.
 export const writingStore = createStore<WritingState>({
   ...emptyWriting(),
   ...stored,
+  charStats: Object.fromEntries(
+    Object.entries(stored.charStats ?? {}).map(([id, stat]) => [
+      id,
+      // A stat saved by an older build may miss recently added fields.
+      { ...emptyWriteCharStat(), ...(stat as Partial<WriteCharStat>) },
+    ])
+  ),
   totals: { ...emptyWriting().totals, ...stored.totals },
 })
 

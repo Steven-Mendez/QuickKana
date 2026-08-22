@@ -159,6 +159,12 @@ function Practice() {
           {/* Everything that is not the drill lives down here, out of the way. */}
           <footer className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-x-6 gap-y-2 py-5 text-xs text-muted-foreground">
             <div className="flex items-center gap-4 tabular-nums">
+              {settings.sessionLimitEnabled && (
+                <SessionClock
+                  startedAt={session.startedAt}
+                  minutes={settings.sessionMinutes}
+                />
+              )}
               <Metric
                 label={t("practice.correct")}
                 value={`${session.correct}/${session.attempts}`}
@@ -253,6 +259,39 @@ function UnlockBanner({ lessonId }: { lessonId: string }) {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+/**
+ * Time left in the pomodoro session. Purely informative — the session itself
+ * ends at the next prompt boundary after the clock hits zero, so the current
+ * character is never cut off mid-answer.
+ */
+function SessionClock({
+  startedAt,
+  minutes,
+}: {
+  startedAt: number
+  minutes: number
+}) {
+  const { t } = useTranslation()
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const remaining = Math.max(0, startedAt + minutes * 60_000 - now)
+  const mm = Math.floor(remaining / 60_000)
+  const ss = Math.floor((remaining % 60_000) / 1000)
+
+  return (
+    <Metric
+      label={t("practice.timeLeft")}
+      value={`${mm}:${String(ss).padStart(2, "0")}`}
+      highlight={remaining === 0}
+    />
   )
 }
 

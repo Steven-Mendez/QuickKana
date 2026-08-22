@@ -10,7 +10,20 @@ export const emptyWriteCharStat = (): WriteCharStat => ({
   lastSeenAt: 0,
   weight: 1.5,
   strokeMistakes: 0,
+  memoryCorrect: 0,
 })
+
+/** Clean guided completions before the outline goes away for a character. */
+export const GUIDED_COMPLETIONS = 2
+
+/**
+ * Whether a character is still traced over the guide. Deliberately quick to
+ * graduate — a couple of clean traces — because the lesson gate only accepts
+ * writes from memory, and the guide has to get out of the way for those to
+ * happen at all.
+ */
+export const needsOutline = (stat: WriteCharStat | undefined): boolean =>
+  (stat?.correct ?? 0) < GUIDED_COMPLETIONS
 
 export interface WriteAttempt {
   /** Wrong strokes drawn before the character was completed. */
@@ -70,7 +83,13 @@ export function applyWriteAttempt(
         ? stat.streak
         : 0
 
+  // Only an unaided, clean, from-memory completion counts as "can write it".
+  const fromMemory =
+    outcome.correct && !attempt.assisted && !attempt.outline && !attempt.skipped
+
   return {
+    // The store backfills the field on load, so it is always a number here.
+    memoryCorrect: stat.memoryCorrect + (fromMemory ? 1 : 0),
     attempts: stat.attempts + 1,
     correct: stat.correct + (outcome.correct ? 1 : 0),
     streak,

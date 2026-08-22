@@ -110,6 +110,18 @@ describe("applyWriteAttempt", () => {
     expect(held.correct).toBe(1)
   })
 
+  it("counts memory writes only when clean, unassisted and outline-free", () => {
+    let stat = emptyWriteCharStat()
+    stat = applyWriteAttempt(stat, attempt({ outline: true }), 500, 1)
+    expect(stat.memoryCorrect).toBe(0)
+    stat = applyWriteAttempt(stat, attempt({ assisted: true }), 500, 2)
+    expect(stat.memoryCorrect).toBe(0)
+    stat = applyWriteAttempt(stat, attempt({ mistakes: 1 }), 500, 3)
+    expect(stat.memoryCorrect).toBe(0)
+    stat = applyWriteAttempt(stat, attempt({}), 500, 4)
+    expect(stat.memoryCorrect).toBe(1)
+  })
+
   it("merges reading and writing by best mastery per character", () => {
     const stat = (attempts: number, correct: number): CharStat => ({
       attempts,

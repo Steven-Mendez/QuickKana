@@ -123,6 +123,45 @@ function SettingsPage() {
           <Separator />
 
           <Row
+            id="session-limit"
+            title={t("settings.sessionLimitTitle")}
+            description={t("settings.sessionLimitDesc")}
+          >
+            <Switch
+              id="session-limit"
+              checked={settings.sessionLimitEnabled}
+              onCheckedChange={(checked) =>
+                updateSettings({ sessionLimitEnabled: checked })
+              }
+            />
+          </Row>
+
+          {settings.sessionLimitEnabled && (
+            <div className="space-y-2 ps-1">
+              <div className="flex items-center justify-between text-sm">
+                <Label htmlFor="session-minutes">
+                  {t("settings.sessionMinutes")}
+                </Label>
+                <span className="text-muted-foreground tabular-nums">
+                  {settings.sessionMinutes} min
+                </span>
+              </div>
+              <Slider
+                id="session-minutes"
+                min={3}
+                max={30}
+                step={1}
+                value={settings.sessionMinutes}
+                onValueChange={(value) =>
+                  updateSettings({ sessionMinutes: value as number })
+                }
+              />
+            </div>
+          )}
+
+          <Separator />
+
+          <Row
             id="accept-aliases"
             title={t("settings.aliasesTitle")}
             description={t("settings.aliasesDesc")}

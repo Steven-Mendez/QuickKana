@@ -89,6 +89,12 @@ export interface ProgressState {
 export interface WriteCharStat extends CharStat {
   /** Total wrong strokes ever drawn on this character. */
   strokeMistakes: number
+  /**
+   * Clean, unassisted completions with no outline — written from memory.
+   * This is what the lesson gate asks for: tracing over a guide proves
+   * motor practice, only recalling the shape unaided proves writing.
+   */
+  memoryCorrect: number
 }
 
 /** The Write mode's persisted track, fully separate from reading progress. */
@@ -131,6 +137,13 @@ export interface Settings {
    */
   practiceReading: boolean
   practiceWriting: boolean
+  /**
+   * Pomodoro-style sessions: the drill ends itself after `sessionMinutes`
+   * and shows the summary, so practice comes in bounded bursts instead of an
+   * endless grind. Off means the session runs until the user finishes it.
+   */
+  sessionLimitEnabled: boolean
+  sessionMinutes: number
   /** Cross-misses on a pair before its group activates. */
   activationThreshold: number
   /** Consecutive correct answers on a group's members before it graduates. */

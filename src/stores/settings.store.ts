@@ -5,6 +5,8 @@ import type { Settings } from "@/lib/types"
 export const DEFAULT_SETTINGS: Settings = {
   practiceReading: true,
   practiceWriting: true,
+  sessionLimitEnabled: true,
+  sessionMinutes: 5,
   focusMode: true,
   activationThreshold: 2,
   graduationStreak: 4,

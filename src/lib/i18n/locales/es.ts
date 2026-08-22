@@ -125,6 +125,7 @@ export const es: typeof en = {
     emptyCta: "Ir al selector",
     correct: "Aciertos",
     accuracy: "Precisión",
+    timeLeft: "Tiempo",
     bestStreak: "Mejor racha",
     learning: "Aprendiendo",
     confirm: "confirmar",
@@ -284,6 +285,10 @@ export const es: typeof en = {
     paceTitle: "Acelerar cuando voy en racha",
     paceDesc:
       "Cuenta tu racha sobre los caracteres de la lección actual, no sobre el repaso. Tras {{floor}} pasada limpia toman más parte del drill, y con {{full}} la siguiente lección se desbloquea con menos repeticiones. Un fallo en ellos devuelve el ritmo normal.",
+    sessionLimitTitle: "Sesiones con límite (pomodoro)",
+    sessionLimitDesc:
+      "La sesión termina sola y muestra tu resumen — mejor ráfagas cortas que un no parar. Desactívalo para una sesión sin límite.",
+    sessionMinutes: "Duración de la sesión",
     exerciseReadingTitle: "Ejercicios de lectura",
     exerciseReadingDesc: "Ves el kana y escribes su rōmaji.",
     exerciseWritingTitle: "Ejercicios de escritura",
@@ -291,10 +296,10 @@ export const es: typeof en = {
       "Ves el rōmaji y trazas el kana. Tres intentos por carácter — un trazo mal lo reinicia.",
     writingTitle: "Práctica de escritura",
     writingDesc:
-      "Los ejercicios de escritura muestran el rōmaji y tú trazas el kana trazo a trazo. El progreso de ambos ejercicios cuenta para el mismo camino. El modo con tiempo no aplica al escribir.",
+      "Los ejercicios de escritura muestran el rōmaji y tú trazas el kana trazo a trazo. Ambos ejercicios cuentan para el mismo camino — y con los dos activos, una lección solo se pasa cuando leíste cada carácter y lo escribiste de memoria, sin el contorno. El modo con tiempo no aplica al escribir.",
     alwaysOutlineTitle: "Mostrar siempre el contorno",
     alwaysOutlineDesc:
-      "Mantén la guía de trazado incluso en caracteres que ya dominas en escritura.",
+      "Mantén la guía de trazado en todos los caracteres. Normalmente desaparece tras un par de trazados limpios para que escribas de memoria.",
     leniencyLabel: "Tolerancia de trazos",
     leniencyDesc:
       "Qué tan permisiva es la evaluación de cada trazo. Más alta ayuda al trazar con mouse o con el dedo.",
