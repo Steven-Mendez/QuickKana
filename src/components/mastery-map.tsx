@@ -27,8 +27,18 @@ const cellsOf = (row: KanaRow): Array<Kana> =>
  * The tables on this page answer "what did I get wrong"; this one answers the
  * question a learner actually asks first — how much of it do I know.
  */
-export function MasteryMap({ stats }: { stats: Record<string, CharStat> }) {
+export function MasteryMap({
+  stats,
+  hideDigraphs = false,
+}: {
+  stats: Record<string, CharStat>
+  /** The Write mode can't drill digraphs, so its map leaves them out. */
+  hideDigraphs?: boolean
+}) {
   const { t } = useTranslation()
+  const categories = hideDigraphs
+    ? CATEGORY_IDS.filter((id) => id !== "digraph")
+    : CATEGORY_IDS
   return (
     <div className="space-y-6">
       <Legend />
@@ -38,7 +48,7 @@ export function MasteryMap({ stats }: { stats: Record<string, CharStat> }) {
           <h3 className="text-sm font-medium">{SCRIPT_LABELS[script]}</h3>
 
           <div className="flex flex-wrap gap-x-8 gap-y-5">
-            {CATEGORY_IDS.map((id) => {
+            {categories.map((id) => {
               const rows = ROWS_BY_SCRIPT[script].filter(
                 (row) => row.category === id
               )

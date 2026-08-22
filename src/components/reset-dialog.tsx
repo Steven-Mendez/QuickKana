@@ -17,6 +17,7 @@ import { resetProgress } from "@/stores/progress.store"
 import { resetProgression } from "@/stores/progression.store"
 import { resetSelection } from "@/stores/selection.store"
 import { resetSettings } from "@/stores/settings.store"
+import { resetWriting } from "@/stores/writing.store"
 
 export function ResetDialog() {
   const { t } = useTranslation()
@@ -31,6 +32,7 @@ export function ResetDialog() {
     resetProgression()
     resetSelection()
     resetSettings()
+    resetWriting()
     setOpen(false)
   }
 

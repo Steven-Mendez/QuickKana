@@ -14,10 +14,16 @@ export type SoundEvent =
   | "graduation"
   | "sessionEnd"
   | "streakMilestone"
+  | "strokeCorrect"
+  | "strokeWrong"
 
 const SOUNDS: Record<SoundEvent, LibrarySoundName> = {
   correct: "ui/success_blip",
   wrong: "ui/blocked",
+  // Write mode, once per stroke — deliberately quieter cues than the
+  // per-answer pair above, because they fire several times per character.
+  strokeCorrect: "ui/keystroke_soft",
+  strokeWrong: "ui/item_deselect",
   timeout: "ui/buzz",
   unlock: "arcade/level_up",
   graduation: "ui/success_chime",

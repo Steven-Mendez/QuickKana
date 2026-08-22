@@ -81,6 +81,30 @@ export interface ProgressState {
   }
 }
 
+// ---------------------------------------------------------------- writing
+
+/** Per-character stats for the Write mode. Same shape as `CharStat` so the
+ * scheduler's weighting and the mastery ramp work on it unchanged, plus the
+ * stroke-level error count that only writing produces. */
+export interface WriteCharStat extends CharStat {
+  /** Total wrong strokes ever drawn on this character. */
+  strokeMistakes: number
+}
+
+/** The Write mode's persisted track, fully separate from reading progress. */
+export interface WritingState {
+  version: 1
+  charStats: Record<string, WriteCharStat>
+  totals: {
+    attempts: number
+    correct: number
+    sessions: number
+    totalMs: number
+  }
+  /** Write-only records — never mixed with the reading ones. */
+  records: { bestSessionStreak: number }
+}
+
 export interface AttemptRecord {
   t: number
   id: string
@@ -122,6 +146,12 @@ export interface Settings {
   /** Tighten the clock as the streak grows. */
   speedRamp: boolean
   showGroupHint: boolean
+  /** Write mode: keep the outline visible even on mastered characters. */
+  writeAlwaysOutline: boolean
+  /** Write mode: hanzi-writer stroke grading; higher is more forgiving. */
+  writeLeniency: number
+  /** Write mode: animate the stroke order the first time a kana appears. */
+  writeDemoOnNew: boolean
   theme: ThemePreference
   language: LanguagePreference
   soundEnabled: boolean

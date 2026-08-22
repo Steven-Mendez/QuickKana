@@ -13,12 +13,18 @@ import { KanaSelector } from "@/components/kana-selector"
 import { activeGroups } from "@/lib/confusion"
 import { lessonAt, poolUpTo } from "@/lib/journey"
 import { SCRIPT_LABELS, displayPair } from "@/lib/kana"
+import { writableIds } from "@/lib/kana/strokes"
 import { formatPercent } from "@/lib/stats"
 import { progressStore } from "@/stores/progress.store"
-import { lessonOf, progressionStore, setMode } from "@/stores/progression.store"
+import {
+  lessonOf,
+  progressionStore,
+  setDrillMode,
+  setMode,
+} from "@/stores/progression.store"
 import { selectedIds, selectionStore } from "@/stores/selection.store"
 import { startSession } from "@/stores/session.store"
-import type { PracticeMode } from "@/stores/progression.store"
+import type { DrillMode, PracticeMode } from "@/stores/progression.store"
 
 export const Route = createFileRoute("/")({ component: Home })
 
@@ -34,10 +40,13 @@ function Home() {
   // the two modes — guided practice ignores the selector entirely.
   const track = progression.track
   const lesson = lessonOf(progression, track)
-  const pool =
+  const basePool =
     progression.mode === "journey"
       ? poolUpTo(track, lesson)
       : selectedIds(selection)
+  // The Write drill skips digraphs (two glyphs), so its pool can be smaller.
+  const pool =
+    progression.drillMode === "write" ? writableIds(basePool) : basePool
 
   const accuracy =
     progress.totals.attempts > 0
@@ -121,10 +130,23 @@ function Home() {
         onValueChange={(value) => setMode(value as PracticeMode)}
         className="mt-6"
       >
-        <TabsList data-tour="mode-tabs">
-          <TabsTrigger value="journey">{t("home.tabJourney")}</TabsTrigger>
-          <TabsTrigger value="free">{t("home.tabFree")}</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TabsList data-tour="mode-tabs">
+            <TabsTrigger value="journey">{t("home.tabJourney")}</TabsTrigger>
+            <TabsTrigger value="free">{t("home.tabFree")}</TabsTrigger>
+          </TabsList>
+
+          {/* What the drill asks for: kana → rōmaji, or rōmaji → traced kana. */}
+          <Tabs
+            value={progression.drillMode}
+            onValueChange={(value) => setDrillMode(value as DrillMode)}
+          >
+            <TabsList aria-label={t("home.drillModeLabel")}>
+              <TabsTrigger value="read">{t("home.tabRead")}</TabsTrigger>
+              <TabsTrigger value="write">{t("home.tabWrite")}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
         <TabsContent value="journey" className="mt-5">
           <JourneyPanel />

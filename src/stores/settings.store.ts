@@ -14,6 +14,11 @@ export const DEFAULT_SETTINGS: Settings = {
   timeLimitMs: 5000,
   speedRamp: true,
   showGroupHint: true,
+  writeAlwaysOutline: false,
+  // hanzi-writer's default is 1; a touch more forgiving suits beginners
+  // tracing with a mouse or a finger.
+  writeLeniency: 1.3,
+  writeDemoOnNew: true,
   theme: "system",
   language: "system",
   soundEnabled: true,

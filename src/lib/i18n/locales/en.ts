@@ -56,6 +56,9 @@ export const en = {
     viewDetails: "View details",
     tabJourney: "Journey",
     tabFree: "Free selection",
+    tabRead: "Read",
+    tabWrite: "Write",
+    drillModeLabel: "Practice type",
     barLesson: "{{script}} · lesson {{number}}",
     noneSelected: "No characters selected",
     character_one: "character",
@@ -103,6 +106,16 @@ export const en = {
     record: "record",
     inARow: "{{count}} in a row!",
     groupTitle: "{{streak}}/{{total}} correct answers to master it",
+  },
+  writeDrill: {
+    showMe: "Show me",
+    watchStrokes: "watch the stroke order",
+    completedWithMistakes: "<jp>{{char}}</jp> — some strokes were off",
+    ariaCanvas: "Trace the kana for {{romaji}}",
+  },
+  writePractice: {
+    emptyBody:
+      "Pick at least one character to practice writing. Digraphs (きゃ, シャ…) can only be practiced in Read for now.",
   },
   practice: {
     emptyTitle: "No characters selected",
@@ -152,6 +165,10 @@ export const en = {
     recordDays_other: "record of {{count}} days",
     confusions: "Confusions",
     inTargeted: "{{count}} in targeted practice",
+    strokeErrors: "Stroke errors",
+    strokeErrorsHint: "wrong strokes across all characters",
+    writeOnlyNote:
+      "Confusion tracking applies to reading only, so those tabs show reading data.",
     tabMastery: "Mastery",
     tabPairs: "Pairs",
     tabChars: "Per character",
@@ -265,6 +282,18 @@ export const en = {
     paceTitle: "Speed up when I'm on a roll",
     paceDesc:
       "Counts your run on the current lesson's own characters, not on review. After {{floor}} clean pass through them they take a bigger share of the drill, and by {{full}} the next lesson unlocks on fewer repetitions. One mistake on them puts the normal pace back.",
+    writingTitle: "Writing practice",
+    writingDesc:
+      "The Write drill shows the rōmaji and you trace the kana stroke by stroke. Timed mode doesn't apply while writing.",
+    alwaysOutlineTitle: "Always show outline",
+    alwaysOutlineDesc:
+      "Keep the tracing guide even on characters you've mastered in writing.",
+    leniencyLabel: "Stroke leniency",
+    leniencyDesc:
+      "How forgiving stroke grading is. Higher helps when tracing with a mouse or a finger.",
+    writeDemoTitle: "Show demo on new characters",
+    writeDemoDesc:
+      "Animates the stroke order the first time a character appears in Write. Demoed attempts don't count toward mastery.",
     hintTitle: "Show which group I'm practicing",
     hintDesc: 'An indicator during the drill like "practicing つ vs し".',
     appearanceTitle: "Appearance",

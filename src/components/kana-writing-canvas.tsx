@@ -134,6 +134,10 @@ export function KanaWritingCanvas({
 
   /** The character the live writer instance is currently showing. */
   const shownCharRef = useRef<string | null>(null)
+  /** Resolves when the last `setCharacter()` finished rendering. */
+  const charChainRef = useRef<Promise<void>>(Promise.resolve())
+  /** Character a demo was requested for — its quiz start is deferred. */
+  const demoRequestedRef = useRef<string | null>(null)
 
   useEffect(() => {
     const el = containerRef.current
@@ -174,10 +178,13 @@ export function KanaWritingCanvas({
     const writer = writerRef.current
     if (!writer || shownCharRef.current === char) return
     shownCharRef.current = char
+    demoRequestedRef.current = null
     writer.cancelQuiz()
-    void writer.setCharacter(char).then(() => {
+    charChainRef.current = writer.setCharacter(char).then(() => {
       if (writerRef.current !== writer || latest.current.char !== char) return
       applyOutline()
+      // A demo asked for this character starts the quiz itself when it ends.
+      if (demoRequestedRef.current === char) return
       startQuiz()
     })
   }, [char])
@@ -214,17 +221,30 @@ export function KanaWritingCanvas({
         const writer = writerRef.current
         if (!writer) return
         const shown = latest.current.char
-        writer.cancelQuiz()
-        void writer.animateCharacter({
-          onComplete: () => {
-            // Hold the finished character for a beat before quizzing again.
-            setTimeout(() => {
-              if (writerRef.current !== writer || latest.current.char !== shown)
-                return
-              void writer.hideCharacter({ duration: 160 })
-              startQuiz()
-            }, 500)
-          },
+        demoRequestedRef.current = shown
+        // Wait for any in-flight setCharacter() so the demo animates the
+        // character actually on screen.
+        void charChainRef.current.then(() => {
+          if (writerRef.current !== writer || latest.current.char !== shown) {
+            return
+          }
+          writer.cancelQuiz()
+          void writer.animateCharacter({
+            onComplete: () => {
+              // Hold the finished character for a beat before quizzing again.
+              setTimeout(() => {
+                if (
+                  writerRef.current !== writer ||
+                  latest.current.char !== shown
+                ) {
+                  return
+                }
+                demoRequestedRef.current = null
+                void writer.hideCharacter({ duration: 160 })
+                startQuiz()
+              }, 500)
+            },
+          })
         })
       },
     }),

@@ -9,6 +9,7 @@ import { useReward } from "react-rewards"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { DrillCard } from "@/components/drill-card"
 import { SessionSummary } from "@/components/session-summary"
+import { WritePractice } from "@/components/write-practice"
 import { useDrill } from "@/hooks/use-drill"
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
 import { lessonAt, lessonById } from "@/lib/journey"
@@ -22,7 +23,17 @@ export const Route = createFileRoute("/practice")({ component: Practice })
 /** Fills the viewport below the 3.5rem nav so the kana can sit dead centre. */
 const FULL_HEIGHT = "min-h-[calc(100dvh-3.5rem)]"
 
+/**
+ * Same route for both drills; which one runs is a persisted preference. The
+ * split into two components matters: each drill's hook wires its own effects
+ * and timers, so they must never be mounted at the same time.
+ */
 function Practice() {
+  const drillMode = useSelector(progressionStore, (s) => s.drillMode)
+  return drillMode === "write" ? <WritePractice /> : <ReadPractice />
+}
+
+function ReadPractice() {
   const {
     session,
     settings,

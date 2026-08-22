@@ -54,6 +54,9 @@ export const es: typeof en = {
     viewDetails: "Ver detalles",
     tabJourney: "Camino",
     tabFree: "Selección libre",
+    tabRead: "Leer",
+    tabWrite: "Escribir",
+    drillModeLabel: "Tipo de práctica",
     barLesson: "{{script}} · lección {{number}}",
     noneSelected: "Ningún carácter seleccionado",
     character_one: "carácter",
@@ -101,6 +104,16 @@ export const es: typeof en = {
     record: "récord",
     inARow: "¡{{count}} seguidos!",
     groupTitle: "{{streak}}/{{total}} aciertos para dominarlo",
+  },
+  writeDrill: {
+    showMe: "Muéstramelo",
+    watchStrokes: "mira el orden de los trazos",
+    completedWithMistakes: "<jp>{{char}}</jp> — algunos trazos fallaron",
+    ariaCanvas: "Traza el kana de {{romaji}}",
+  },
+  writePractice: {
+    emptyBody:
+      "Elige al menos un carácter para practicar escritura. Los dígrafos (きゃ, シャ…) por ahora solo se practican en Leer.",
   },
   practice: {
     emptyTitle: "Ningún carácter seleccionado",
@@ -150,6 +163,10 @@ export const es: typeof en = {
     recordDays_other: "récord de {{count}} días",
     confusions: "Confusiones",
     inTargeted: "{{count}} en práctica dirigida",
+    strokeErrors: "Errores de trazo",
+    strokeErrorsHint: "trazos incorrectos entre todos los caracteres",
+    writeOnlyNote:
+      "El seguimiento de confusiones aplica solo a lectura, así que esas pestañas muestran datos de lectura.",
     tabMastery: "Dominio",
     tabPairs: "Pares",
     tabChars: "Por carácter",
@@ -263,6 +280,18 @@ export const es: typeof en = {
     paceTitle: "Acelerar cuando voy en racha",
     paceDesc:
       "Cuenta tu racha sobre los caracteres de la lección actual, no sobre el repaso. Tras {{floor}} pasada limpia toman más parte del drill, y con {{full}} la siguiente lección se desbloquea con menos repeticiones. Un fallo en ellos devuelve el ritmo normal.",
+    writingTitle: "Práctica de escritura",
+    writingDesc:
+      "El drill de escritura muestra el rōmaji y tú trazas el kana trazo a trazo. El modo con tiempo no aplica al escribir.",
+    alwaysOutlineTitle: "Mostrar siempre el contorno",
+    alwaysOutlineDesc:
+      "Mantén la guía de trazado incluso en caracteres que ya dominas en escritura.",
+    leniencyLabel: "Tolerancia de trazos",
+    leniencyDesc:
+      "Qué tan permisiva es la evaluación de cada trazo. Más alta ayuda al trazar con mouse o con el dedo.",
+    writeDemoTitle: "Demo en caracteres nuevos",
+    writeDemoDesc:
+      "Anima el orden de los trazos la primera vez que un carácter aparece en Escribir. Los intentos con demo no cuentan para el dominio.",
     hintTitle: "Mostrar qué grupo practico",
     hintDesc: 'Un indicador durante el drill como "practicando つ vs し".',
     appearanceTitle: "Apariencia",

@@ -254,7 +254,13 @@ function Countdown({ limitMs }: { limitMs: number }) {
  * Consecutive correct answers. It grows louder as the run gets longer, because
  * a number that never changes shape is a number you stop looking at.
  */
-function StreakCounter({ streak, record }: { streak: number; record: number }) {
+export function StreakCounter({
+  streak,
+  record,
+}: {
+  streak: number
+  record: number
+}) {
   const { t } = useTranslation()
   const tier = streakTier(streak)
   const milestone = milestoneAt(streak)

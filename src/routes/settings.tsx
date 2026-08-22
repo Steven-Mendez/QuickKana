@@ -164,6 +164,74 @@ function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
+            {t("settings.writingTitle")}
+          </CardTitle>
+          <CardDescription>{t("settings.writingDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <Row
+            id="write-outline"
+            title={t("settings.alwaysOutlineTitle")}
+            description={t("settings.alwaysOutlineDesc")}
+          >
+            <Switch
+              id="write-outline"
+              checked={settings.writeAlwaysOutline}
+              onCheckedChange={(checked) =>
+                updateSettings({ writeAlwaysOutline: checked })
+              }
+            />
+          </Row>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-6">
+              <div className="space-y-0.5">
+                <Label htmlFor="write-leniency" className="text-sm font-medium">
+                  {t("settings.leniencyLabel")}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.leniencyDesc")}
+                </p>
+              </div>
+              <span className="text-sm font-medium tabular-nums">
+                {settings.writeLeniency.toFixed(1)}
+              </span>
+            </div>
+            <Slider
+              id="write-leniency"
+              min={8}
+              max={20}
+              step={1}
+              value={Math.round(settings.writeLeniency * 10)}
+              onValueChange={(value) =>
+                updateSettings({ writeLeniency: (value as number) / 10 })
+              }
+            />
+          </div>
+
+          <Separator />
+
+          <Row
+            id="write-demo"
+            title={t("settings.writeDemoTitle")}
+            description={t("settings.writeDemoDesc")}
+          >
+            <Switch
+              id="write-demo"
+              checked={settings.writeDemoOnNew}
+              onCheckedChange={(checked) =>
+                updateSettings({ writeDemoOnNew: checked })
+              }
+            />
+          </Row>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
             {t("settings.adaptiveTitle")}
           </CardTitle>
           <CardDescription>{t("settings.adaptiveDesc")}</CardDescription>

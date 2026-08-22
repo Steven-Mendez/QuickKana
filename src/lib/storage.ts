@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   selection: `${PREFIX}v1:selection`,
   progress: `${PREFIX}v1:progress`,
   progression: `${PREFIX}v1:progression`,
+  writing: `${PREFIX}v1:writing`,
   history: `${PREFIX}v1:history`,
   /** One-shot flag, not a preference: the onboarding tour was dismissed once. */
   tourSeen: `${PREFIX}v1:tour-seen`,
