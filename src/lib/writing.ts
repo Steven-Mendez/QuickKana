@@ -99,6 +99,7 @@ export function applyWriteAttempt(
     // Any wrong stroke raises the character's frequency in the drill; clean
     // completions taper it — the same curve the reading drill uses.
     weight: nextWeight(stat.weight, outcome.correct),
-    strokeMistakes: stat.strokeMistakes + (attempt.skipped ? 0 : attempt.mistakes),
+    strokeMistakes:
+      stat.strokeMistakes + (attempt.skipped ? 0 : attempt.mistakes),
   }
 }

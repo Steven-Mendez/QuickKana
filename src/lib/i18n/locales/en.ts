@@ -11,6 +11,38 @@ export const en = {
     practice: "Practice",
     stats: "Stats",
     settings: "Settings",
+    account: "Account",
+    signIn: "Sign in",
+  },
+  auth: {
+    title: "Your account",
+    subtitle:
+      "Optional: sign in to back up your progress and sync it across devices. Everything keeps working without an account.",
+    signIn: "Sign in",
+    signUp: "Create account",
+    email: "Email",
+    password: "Password",
+    or: "or",
+    google: "Continue with Google",
+    localNote: "Without an account, your progress stays on this device only.",
+    confirmTitle: "Check your inbox",
+    confirmBody:
+      "We sent a confirmation link to {{email}}. Open it to finish creating your account.",
+    errorCredentials: "Wrong email or password.",
+    errorSignUp: "Could not create the account. Try again.",
+    errorWeakPassword: "Password must be at least 8 characters.",
+    errorGoogle: "Could not start Google sign-in. Try again.",
+    errorCallback: "Sign-in link failed or expired. Try again.",
+  },
+  account: {
+    title: "Account",
+    subtitle: "Your progress is backed up and synced while signed in.",
+    providerEmail: "Signed in with email",
+    providerGoogle: "Signed in with Google",
+    since: "since {{date}}",
+    signOut: "Sign out",
+    signOutNote:
+      "Signing out keeps this device's progress and returns to guest mode.",
   },
   theme: {
     system: "System theme",

@@ -112,3 +112,47 @@ The logic that matters is pure and tested in `src/lib/__tests__/`:
 - `src/lib/scheduler.ts` — weights, streak construction and kana selection
 - `src/lib/journey.ts` — the two syllabaries and when each lesson unlocks
 - `src/lib/pressure.ts` — the timer clock and streak milestones
+
+## Supabase (optional account sync)
+
+Guests stay 100% local (localStorage). Signing in adds backup + multi-device
+sync on top; the server is the authority across devices. See
+`docs/supabase.md` for the full setup and sync design.
+
+### Local development
+
+```bash
+supabase start            # local stack (Docker)
+supabase status -o env    # API_URL / PUBLISHABLE_KEY for .env
+pnpm db:reset             # apply migrations
+pnpm gen:types            # regenerate src/types/database.types.ts
+pnpm db:lint
+```
+
+Schema source of truth lives in `supabase/schemas/*.sql` (declarative);
+migrations are generated with `pnpm db:diff <name>` and reviewed by hand.
+Never `supabase db push` without explicit confirmation.
+
+### Dashboard configuration (production)
+
+1. **Auth → URL Configuration**: set Site URL to the production origin and
+   add `https://<origin>/auth/callback` to Redirect URLs.
+2. **Auth → Providers → Google**: enable, set the OAuth Client ID/Secret
+   from Google Cloud Console (authorized redirect URI:
+   `https://hxkqgnyopnhxwwbbhpql.supabase.co/auth/v1/callback`).
+3. **Auth → Email Templates**: point links at the app's confirm route, e.g.
+   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`
+   (confirmation), `type=recovery` (recovery), `type=email_change`.
+4. Hosting env vars:
+   `VITE_SUPABASE_URL=https://hxkqgnyopnhxwwbbhpql.supabase.co` and
+   `VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_…` (never the secret key).
+
+### Supabase features used / not used
+
+- ✅ Postgres + declarative schemas + generated migrations, Auth (email +
+  Google, PKCE via `@supabase/ssr`), RLS everywhere, RPCs
+  (`sync_push`, `import_local_snapshot`, `delete_user_data`), generated
+  TypeScript types, local CLI stack. Realtime and a `delete-account` Edge
+  Function arrive with the sync phases.
+- ⛔ Storage, Vault, pg_cron, Queues — no current use case; revisit if one
+  appears (e.g. Storage for user-drawn stroke exports).

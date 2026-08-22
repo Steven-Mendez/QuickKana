@@ -68,10 +68,7 @@ function currentLesson(): Lesson | null {
  * the same journey.
  */
 const gateStats = () =>
-  mergeBestMastery(
-    progressStore.state.charStats,
-    writingStore.state.charStats
-  )
+  mergeBestMastery(progressStore.state.charStats, writingStore.state.charStats)
 
 /** Read sightings a lesson character needs before its lesson can pass. */
 const MIN_READ_SEEN = 2

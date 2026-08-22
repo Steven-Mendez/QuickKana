@@ -9,6 +9,39 @@ export const es: typeof en = {
     practice: "Práctica",
     stats: "Estadísticas",
     settings: "Ajustes",
+    account: "Cuenta",
+    signIn: "Iniciar sesión",
+  },
+  auth: {
+    title: "Tu cuenta",
+    subtitle:
+      "Opcional: inicia sesión para respaldar tu progreso y sincronizarlo entre dispositivos. Todo sigue funcionando sin cuenta.",
+    signIn: "Iniciar sesión",
+    signUp: "Crear cuenta",
+    email: "Correo",
+    password: "Contraseña",
+    or: "o",
+    google: "Continuar con Google",
+    localNote: "Sin cuenta, tu progreso se queda solo en este dispositivo.",
+    confirmTitle: "Revisa tu correo",
+    confirmBody:
+      "Enviamos un enlace de confirmación a {{email}}. Ábrelo para terminar de crear tu cuenta.",
+    errorCredentials: "Correo o contraseña incorrectos.",
+    errorSignUp: "No se pudo crear la cuenta. Inténtalo de nuevo.",
+    errorWeakPassword: "La contraseña debe tener al menos 8 caracteres.",
+    errorGoogle: "No se pudo iniciar sesión con Google. Inténtalo de nuevo.",
+    errorCallback: "El enlace falló o expiró. Inténtalo de nuevo.",
+  },
+  account: {
+    title: "Cuenta",
+    subtitle:
+      "Tu progreso se respalda y sincroniza mientras tienes la sesión iniciada.",
+    providerEmail: "Sesión iniciada con correo",
+    providerGoogle: "Sesión iniciada con Google",
+    since: "desde {{date}}",
+    signOut: "Cerrar sesión",
+    signOutNote:
+      "Cerrar sesión conserva el progreso de este dispositivo y vuelve al modo invitado.",
   },
   theme: {
     system: "Tema del sistema",

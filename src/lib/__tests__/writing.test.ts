@@ -53,9 +53,9 @@ describe("scoreWriteAttempt", () => {
       correct: true,
       streak: "hold",
     })
-    expect(
-      scoreWriteAttempt(attempt({ assisted: true, mistakes: 3 }))
-    ).toEqual({ correct: false, streak: "hold" })
+    expect(scoreWriteAttempt(attempt({ assisted: true, mistakes: 3 }))).toEqual(
+      { correct: false, streak: "hold" }
+    )
   })
 
   it("scores a skip as a plain miss", () => {

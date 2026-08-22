@@ -15,6 +15,12 @@ export default [
     },
   },
   {
-    ignores: ["eslint.config.js", ".prettierrc"],
+    ignores: [
+      "eslint.config.js",
+      ".prettierrc",
+      // CLI-managed runtime temp files and generated DB types.
+      "supabase/**",
+      "src/types/database.types.ts",
+    ],
   },
 ]

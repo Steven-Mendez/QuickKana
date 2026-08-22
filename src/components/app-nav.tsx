@@ -1,6 +1,13 @@
 import { Link } from "@tanstack/react-router"
-import { BarChart3, Grid2x2, Settings as SettingsIcon } from "lucide-react"
+import {
+  BarChart3,
+  Grid2x2,
+  Settings as SettingsIcon,
+  UserRound,
+} from "lucide-react"
+import { useSelector } from "@tanstack/react-store"
 import { useTranslation } from "react-i18next"
+import { authStore } from "@/stores/auth.store"
 import { LanguageToggle } from "@/components/language-toggle"
 import { SoundToggle } from "@/components/sound-toggle"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -45,7 +52,26 @@ export function AppNav() {
         <LanguageToggle />
         <SoundToggle />
         <ThemeToggle />
+        <AccountLink />
       </nav>
     </header>
+  )
+}
+
+/** Points at /account when signed in, /auth/login otherwise. */
+function AccountLink() {
+  const { t } = useTranslation()
+  const signedIn = useSelector(authStore, (s) => s.status === "signedIn")
+  return (
+    <Link
+      to={signedIn ? "/account" : "/auth/login"}
+      aria-label={t(signedIn ? "nav.account" : "nav.signIn")}
+      className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-accent data-[status=active]:text-foreground"
+    >
+      <UserRound className="size-4" />
+      <span className="hidden sm:inline">
+        {t(signedIn ? "nav.account" : "nav.signIn")}
+      </span>
+    </Link>
   )
 }

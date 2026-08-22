@@ -1,3 +1,6 @@
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+supabase/
+src/types/database.types.ts
+src/routeTree.gen.ts

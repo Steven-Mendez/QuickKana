@@ -40,7 +40,10 @@ const runtime = () => import("react-sounds")
  * called from the drill's non-React callbacks, and swallows every failure —
  * a blocked AudioContext or an unreachable CDN must never break an answer.
  */
-export function playEffect(event: SoundEvent, options?: { rate?: number }): void {
+export function playEffect(
+  event: SoundEvent,
+  options?: { rate?: number }
+): void {
   const { soundEnabled, soundVolume } = settingsStore.state
   if (!soundEnabled) return
   runtime()
