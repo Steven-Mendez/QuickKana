@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS: Settings = {
   burstCooldown: 4,
   adaptivePace: true,
   acceptAliases: true,
+  autoSubmit: false,
   timeLimitEnabled: false,
   timeLimitMs: 5000,
   speedRamp: true,

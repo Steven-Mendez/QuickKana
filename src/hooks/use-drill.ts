@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSelector } from "@tanstack/react-store"
 import { getKana, requireKana, resolveTyped } from "@/lib/kana"
-import { isCorrect } from "@/lib/kana/romaji"
+import { isCorrect, normalizeRomaji } from "@/lib/kana/romaji"
 import { isWritable, writableIds } from "@/lib/kana/strokes"
 import { needsOutline } from "@/lib/writing"
 import { lessonAt, lessonPhase, poolUpTo } from "@/lib/journey"
@@ -432,6 +432,54 @@ export function useDrill() {
   }, [advance])
 
   /**
+   * Input with the auto-submit judgement layered on. Every keystroke lands in
+   * the store first; with the setting on, the answer is then scored the moment
+   * it becomes decisive:
+   *
+   * - it matches an accepted spelling → submitted as correct;
+   * - it stopped being a prefix of any accepted spelling AND resolves to some
+   *   other kana → submitted as wrong, with the full spelling intact for the
+   *   confusion matrix.
+   *
+   * Anything undecided just waits: "sh" while サ expects "sa" is wrong-bound
+   * but still mid-word — cutting it there would file no confusion pair, while
+   * one more letter makes it "shi" and attributes the miss to シ. Enter still
+   * submits at any point, and gibberish that never resolves is left to Enter
+   * or the clock. During the retry phase only a correct retype advances (a
+   * second wrong guess is never scored — see submit), so nothing is auto-sent
+   * as wrong there.
+   */
+  const handleInput = useCallback(
+    (value: string) => {
+      setInput(value)
+
+      const config = settingsStore.state
+      if (!config.autoSubmit) return
+      const state = sessionStore.state
+      if (!state.current || state.exercise !== "read") return
+      if (state.phase === "correct") return
+
+      const typed = normalizeRomaji(value)
+      if (!typed) return
+
+      const shown = requireKana(state.current.id)
+      if (isCorrect(typed, shown, config.acceptAliases)) {
+        submit()
+        return
+      }
+      if (state.phase === "retry") return
+
+      const accepted = (
+        config.acceptAliases ? [shown.romaji, ...shown.alt] : [shown.romaji]
+      ).map(normalizeRomaji)
+      if (accepted.some((spelling) => spelling.startsWith(typed))) return
+
+      if (resolveTyped(typed, shown) !== null) submit()
+    },
+    [submit]
+  )
+
+  /**
    * The clock ran out. Scored exactly like a wrong answer — including the
    * retry that follows — because a character you could not read in time is one
    * you do not know yet. Reading only: the writing drill has no clock.
@@ -712,7 +760,7 @@ export function useDrill() {
     activeGroup,
     pushingPace,
     writeOutline,
-    setInput,
+    setInput: handleInput,
     submit,
     skip,
     finish,

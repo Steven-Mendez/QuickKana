@@ -313,6 +313,9 @@ export const en = {
     title: "Settings",
     subtitle: "All data is saved in this browser. No account or server.",
     practiceTitle: "Practice",
+    autoSubmitTitle: "Submit answer automatically",
+    autoSubmitDesc:
+      "The answer is sent on its own as soon as it is complete, no Enter needed. Recommended on the phone; on desktop Enter is usually more comfortable.",
     aliasesTitle: "Accept romanization variants",
     aliasesDesc:
       "Beyond Hepburn (shi, tsu, fu, ji), accepts si, tu, hu, zi and similar. Always saves the Hepburn form.",

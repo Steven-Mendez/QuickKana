@@ -312,6 +312,9 @@ export const es: typeof en = {
     subtitle:
       "Todos los datos se guardan en este navegador. Sin cuenta ni servidor.",
     practiceTitle: "Práctica",
+    autoSubmitTitle: "Enviar respuesta automáticamente",
+    autoSubmitDesc:
+      "La respuesta se envía sola en cuanto está completa, sin pulsar Enter. Recomendado en el teléfono; en escritorio Enter suele ser más cómodo.",
     aliasesTitle: "Aceptar variantes de romanización",
     aliasesDesc:
       "Además de Hepburn (shi, tsu, fu, ji), acepta si, tu, hu, zi y similares. Siempre guarda la forma Hepburn.",

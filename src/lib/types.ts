@@ -159,6 +159,12 @@ export interface Settings {
   adaptivePace: boolean
   /** Accept Nihon-shiki/Kunrei spellings (si, tu, hu, ...) as correct. */
   acceptAliases: boolean
+  /**
+   * Reading drill: score the answer as soon as the typed rōmaji is decisive —
+   * correct, or a complete answer that can only be wrong — instead of waiting
+   * for Enter. Meant for phones, where reaching for Enter breaks the flow.
+   */
+  autoSubmit: boolean
   /** Timed mode: running out of time scores the character as a miss. */
   timeLimitEnabled: boolean
   timeLimitMs: number

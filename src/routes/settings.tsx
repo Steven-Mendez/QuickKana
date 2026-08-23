@@ -162,6 +162,20 @@ function SettingsPage() {
           <Separator />
 
           <Row
+            id="auto-submit"
+            title={t("settings.autoSubmitTitle")}
+            description={t("settings.autoSubmitDesc")}
+          >
+            <Switch
+              id="auto-submit"
+              checked={settings.autoSubmit}
+              onCheckedChange={(checked) =>
+                updateSettings({ autoSubmit: checked })
+              }
+            />
+          </Row>
+
+          <Row
             id="accept-aliases"
             title={t("settings.aliasesTitle")}
             description={t("settings.aliasesDesc")}
