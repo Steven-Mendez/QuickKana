@@ -3,6 +3,7 @@ import {
   Outlet,
   Scripts,
   createRootRoute,
+  useRouterState,
 } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
@@ -36,7 +37,11 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      {
+        name: "viewport",
+        content:
+          "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
+      },
       { title: "QuickKana — hiragana and katakana practice" },
       {
         name: "description",
@@ -70,10 +75,25 @@ function RootComponent() {
   // Mounted here so the language side effects run on every route.
   useLanguage()
 
+  // The mobile tab bar (see AppNav) covers the bottom of every page except
+  // the drill, which needs the full viewport; the content gets padded to
+  // match on exactly the same condition.
+  const onDrill = useRouterState({
+    select: (s) => s.location.pathname === "/practice",
+  })
+
   return (
     <Providers>
       <AppNav />
-      <Outlet />
+      <div
+        className={
+          onDrill
+            ? undefined
+            : "pb-[calc(3.5rem+env(safe-area-inset-bottom))] sm:pb-0"
+        }
+      >
+        <Outlet />
+      </div>
     </Providers>
   )
 }

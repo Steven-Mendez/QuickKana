@@ -74,7 +74,7 @@ export function CharStatsTable({ rows }: { rows: Array<CharRow> }) {
             sortKey="avgMs"
             sort={sort}
             onSort={onSort}
-            className="text-end"
+            className="text-end max-sm:hidden"
           />
           <TableHead>{t("charTable.confusedWith")}</TableHead>
         </TableRow>
@@ -101,7 +101,7 @@ export function CharStatsTable({ rows }: { rows: Array<CharRow> }) {
             <TableCell className="text-end text-muted-foreground tabular-nums">
               {row.attempts}
             </TableCell>
-            <TableCell className="text-end text-muted-foreground tabular-nums">
+            <TableCell className="text-end text-muted-foreground tabular-nums max-sm:hidden">
               {formatMs(row.avgMs)}
             </TableCell>
             <TableCell>

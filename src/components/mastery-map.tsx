@@ -80,7 +80,7 @@ export function MasteryMap({
                           ) : (
                             <span
                               key={`${row.id}-gap-${index}`}
-                              className="size-8"
+                              className="size-9 sm:size-8"
                               aria-hidden
                             />
                           )
@@ -114,7 +114,8 @@ function MasteryCell({
         aria-label={`${kana.char} ${kana.romaji}`}
         className={cn(
           // transition-colors so a mastery change animates its tint shift.
-          "flex size-8 cursor-pointer items-center justify-center rounded font-jp text-sm transition-colors duration-500 hover:ring-1 hover:ring-foreground/20",
+          // size-9 below sm: these are tap targets for the stat popover.
+          "flex size-9 cursor-pointer items-center justify-center rounded font-jp text-sm transition-colors duration-500 hover:ring-1 hover:ring-foreground/20 sm:size-8",
           level === null && "bg-muted/40 text-muted-foreground/40"
         )}
         style={

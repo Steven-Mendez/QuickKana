@@ -142,13 +142,14 @@ function Home() {
       </Tabs>
 
       {/* Floating bar: the pool count and the way out are always reachable,
-          however far down the tables the user has scrolled. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 flex justify-center px-4 pb-5">
+          however far down the tables the user has scrolled. On phones it
+          floats above the bottom tab bar instead of the screen edge. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 flex justify-center px-4 pb-3 sm:bottom-0 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div
           data-tour="practice-cta"
-          className="pointer-events-auto flex items-center gap-3 rounded-full border bg-background/90 py-1.5 ps-5 pe-1.5 shadow-lg backdrop-blur"
+          className="pointer-events-auto flex max-w-full items-center gap-3 rounded-full border bg-background/90 py-1.5 ps-5 pe-1.5 shadow-lg backdrop-blur"
         >
-          <span className="text-sm text-muted-foreground tabular-nums">
+          <span className="min-w-0 truncate text-sm text-muted-foreground tabular-nums">
             {progression.mode === "journey" ? (
               <>
                 {t("home.barLesson", {

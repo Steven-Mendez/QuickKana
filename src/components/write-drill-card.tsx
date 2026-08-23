@@ -127,7 +127,7 @@ export function WriteDrillCard({
   }, [isCorrect, reducedMotion, popScale])
 
   return (
-    <div className="relative mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center gap-5">
+    <div className="relative mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center gap-3 sm:gap-5">
       <StreakCounter streak={session.streak} record={recordStreak} />
 
       {/* Same reserved hint slot as the reading drill. */}

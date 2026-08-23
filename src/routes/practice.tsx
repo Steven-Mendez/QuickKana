@@ -21,8 +21,10 @@ import type { ExerciseType } from "@/lib/types"
 
 export const Route = createFileRoute("/practice")({ component: Practice })
 
-/** Fills the viewport below the 3.5rem nav so the kana can sit dead centre. */
-const FULL_HEIGHT = "min-h-[calc(100dvh-3.5rem)]"
+/** Fills the viewport below the 3.5rem nav (plus the notch inset the nav
+    absorbs) so the kana can sit dead centre. */
+const FULL_HEIGHT =
+  "min-h-[calc(100dvh-3.5rem-env(safe-area-inset-top))]"
 
 /**
  * One drill, two kinds of prompt: reading (type the rōmaji) and writing
@@ -185,9 +187,11 @@ function Practice() {
             </div>
           )}
 
-          {/* Everything that is not the drill lives down here, out of the way. */}
-          <footer className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-x-6 gap-y-2 py-5 text-xs text-muted-foreground">
-            <div className="flex items-center gap-4 tabular-nums">
+          {/* Everything that is not the drill lives down here, out of the way.
+              Phones get a centred stat strip with the actions full-width under
+              it; from sm up it is the classic left-stats / right-buttons row. */}
+          <footer className="mx-auto flex w-full max-w-4xl flex-col gap-3 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-6 sm:gap-y-2 sm:pt-5 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+            <div className="flex flex-wrap items-start justify-center gap-x-6 gap-y-2 tabular-nums sm:items-center sm:justify-start sm:gap-x-4 sm:gap-y-1">
               {settings.sessionLimitEnabled && (
                 <SessionClock
                   startedAt={session.startedAt}
@@ -226,12 +230,22 @@ function Practice() {
               {t("practice.end")}
             </div>
 
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={skip}>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="max-sm:h-10 max-sm:flex-1 max-sm:bg-secondary max-sm:text-foreground"
+                onClick={skip}
+              >
                 {t("practice.skip")}
                 <ArrowRight className="size-3.5" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={finish}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="max-sm:h-10 max-sm:flex-1 max-sm:bg-secondary max-sm:text-foreground"
+                onClick={finish}
+              >
                 <Flag className="size-3.5" />
                 {t("practice.finish")}
               </Button>
@@ -363,6 +377,8 @@ function SessionClock({
   )
 }
 
+/** One session figure. Phones stack the value over a tiny label (the strip is
+    centred there); sm+ reads label-then-value inline, as before. */
 function Metric({
   label,
   value,
@@ -373,8 +389,8 @@ function Metric({
   highlight?: boolean
 }) {
   return (
-    <span className="flex items-baseline gap-1.5">
-      <span>{label}</span>
+    <span className="flex flex-col-reverse items-center gap-0.5 sm:flex-row sm:items-baseline sm:gap-1.5">
+      <span className="text-[10px] sm:text-xs">{label}</span>
       <span
         className={cn(
           "text-sm font-medium text-foreground",

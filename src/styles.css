@@ -130,6 +130,9 @@
     }
   body {
     @apply bg-background text-foreground;
+    /* clip, not hidden: kills page-level horizontal scroll from any stray
+       overflow without creating a scroll container (sticky keeps working). */
+    overflow-x: clip;
     }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;

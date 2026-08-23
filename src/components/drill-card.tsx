@@ -151,6 +151,7 @@ export function DrillCard({
             autoCapitalize="off"
             autoCorrect="off"
             spellCheck={false}
+            enterKeyHint="go"
             aria-label={t("drill.ariaRomajiFor", { char: kana.char })}
             className={cn(
               "h-12 border-0 border-b-2 bg-transparent text-center text-xl tracking-wide shadow-none dark:bg-transparent",
