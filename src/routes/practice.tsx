@@ -13,8 +13,8 @@ import { WriteDrillCard } from "@/components/write-drill-card"
 import { useDrill } from "@/hooks/use-drill"
 import { useKeyboardInset } from "@/hooks/use-keyboard-inset"
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
-import { lessonAt, lessonById } from "@/lib/journey"
-import { lessonOf, progressionStore } from "@/stores/progression.store"
+import { lessonById } from "@/lib/journey"
+import { progressionStore } from "@/stores/progression.store"
 import { preloadEffects } from "@/lib/sound"
 import { formatPercent } from "@/lib/stats"
 import { cn } from "@/lib/utils"
@@ -56,7 +56,7 @@ function Practice() {
     limitMs,
     activeGroup,
     pushingPace,
-    journeyPhase,
+    journeyStage,
     writeOutline,
     setInput,
     submit,
@@ -136,12 +136,11 @@ function Practice() {
 
   const justUnlocked = session.unlocked[session.unlocked.length - 1]
 
-  // While a new section is being introduced the pool is that section alone, and
-  // the footer says so — otherwise the sudden absence of review looks broken.
-  const focusLesson =
-    journeyPhase === "focus" && progression.mode === "journey"
-      ? lessonAt(progression.track, lessonOf(progression, progression.track))
-      : null
+  // What the lesson is working on right now, and how many of its characters are
+  // still waiting on it. Without this the guided mode is opaque: a section read
+  // faultlessly but never written looks like a drill that refuses to move on
+  // for no reason, and the sudden absence of review during focus looks broken.
+  const stage = progression.mode === "journey" ? journeyStage : null
 
   const accuracy = session.attempts > 0 ? session.correct / session.attempts : 0
   const isWritePrompt = session.exercise === "write"
@@ -236,10 +235,12 @@ function Practice() {
                 label={t("practice.bestStreak")}
                 value={String(session.bestStreak)}
               />
-              {focusLesson && (
+              {stage && (
                 <Metric
-                  label={t("practice.learning")}
-                  value={focusLesson.label}
+                  label={t(`practice.stage.${stage.stage}`)}
+                  value={
+                    stage.pending.length > 0 ? String(stage.pending.length) : "✓"
+                  }
                   highlight
                 />
               )}

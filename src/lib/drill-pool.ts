@@ -34,16 +34,22 @@ export interface GuidedPool {
  * lesson. Without this the drill would spend its boost drilling five kana that
  * are already mastered while the characters actually blocking the unlock
  * surfaced once every forty prompts.
+ *
+ * `narrow` holds the pool in focus even after the section reads as familiar.
+ * The stroke-tracing stage needs it (see `lib/stages.ts`): a section can be
+ * read fluently long before it has ever been written, and letting review back
+ * in there would scatter the writing over everything unlocked so far.
  */
 export function guidedPool(
   script: Script,
   index: number,
   charStats: Record<string, CharStat>,
-  lessonStreak: number
+  lessonStreak: number,
+  narrow = false
 ): GuidedPool {
   const lesson = lessonAt(script, index)
 
-  if (lessonPhase(lesson, charStats) === "focus") {
+  if (narrow || lessonPhase(lesson, charStats) === "focus") {
     // No boost: with every candidate boosted alike the factor cancels out.
     return { ids: lesson.ids, phase: "focus" }
   }

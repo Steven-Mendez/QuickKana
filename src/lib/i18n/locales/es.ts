@@ -180,6 +180,12 @@ export const es: typeof en = {
     timeLeft: "Tiempo",
     bestStreak: "Mejor racha",
     learning: "Aprendiendo",
+    stage: {
+      read: "Reconocer",
+      trace: "Trazar",
+      recall: "De memoria",
+      review: "Repaso",
+    },
     confirm: "confirmar",
     end: "terminar",
     skip: "Saltar",

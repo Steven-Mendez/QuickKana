@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSelector } from "@tanstack/react-store"
 import { getKana, requireKana, resolveTyped } from "@/lib/kana"
 import { isCorrect, normalizeRomaji } from "@/lib/kana/romaji"
-import { isWritable, writableIds } from "@/lib/kana/strokes"
+import { writableIds } from "@/lib/kana/strokes"
 import { needsOutline } from "@/lib/writing"
 import { lessonAt, lessonPhase, poolUpTo } from "@/lib/journey"
-import { nextBlock } from "@/lib/blocks"
+import { blockSizes, nextBlock } from "@/lib/blocks"
+import { NO_NEEDS, charReady, lessonNeeds } from "@/lib/gate"
+import { STAGE_EXERCISES, isNarrowStage, lessonStage } from "@/lib/stages"
 import { guidedPool } from "@/lib/drill-pool"
 import { milestoneAt, timeLimitFor } from "@/lib/pressure"
-import { isPushingPace } from "@/lib/momentum"
+import { LESSON_BOOST_MAX, isPushingPace } from "@/lib/momentum"
 import { mergeBestMastery } from "@/lib/stats"
 import { playEffect } from "@/lib/sound"
 import { nextKana } from "@/lib/scheduler"
@@ -40,6 +42,7 @@ import {
   startSession,
 } from "@/stores/session.store"
 import type { Lesson } from "@/lib/journey"
+import type { LessonStageState } from "@/lib/stages"
 import type { ExerciseType, SessionState } from "@/lib/types"
 
 /** Failed tries (wrong strokes) before a writing prompt counts as a miss. */
@@ -71,32 +74,33 @@ function currentLesson(): Lesson | null {
 const gateStats = () =>
   mergeBestMastery(progressStore.state.charStats, writingStore.state.charStats)
 
-/** Read sightings a lesson character needs before its lesson can pass. */
-const MIN_READ_SEEN = 2
+/**
+ * The extra per-character veto on the lesson gate — see `lib/gate.ts`, which
+ * holds the rule itself so the drill can also ask it the other way round:
+ * *which* characters still owe what.
+ */
+const charReadyForUnlock = (id: string): boolean =>
+  charReady(
+    id,
+    progressStore.state.charStats,
+    writingStore.state.charStats,
+    settingsStore.state
+  )
 
 /**
- * The extra per-character veto on the lesson gate. With both exercise types
- * on, mastery alone is not enough to pass a lesson: each character must have
- * been read (recognized) at least a couple of times AND written cleanly from
- * memory — without the outline — at least once. Tracing over the guide never
- * satisfies it; with "always show outline" forced on, a clean guided write
- * counts instead, because memory attempts can then never happen.
+ * What the lesson being introduced still owes the gate, or nothing outside
+ * guided mode — free practice has no lesson to unlock, so no exercise to
+ * favour.
  */
-function charReadyForUnlock(id: string): boolean {
-  const config = settingsStore.state
-  if (!config.practiceReading || !config.practiceWriting) return true
-
-  const readSeen = progressStore.state.charStats[id]?.attempts ?? 0
-  if (readSeen < MIN_READ_SEEN) return false
-
-  const kana = getKana(id)
-  if (!kana || !isWritable(kana)) return true
-
-  const writeStat = writingStore.state.charStats[id]
-  const written = config.writeAlwaysOutline
-    ? (writeStat?.correct ?? 0)
-    : (writeStat?.memoryCorrect ?? 0)
-  return written >= 1
+function currentNeeds() {
+  const lesson = currentLesson()
+  if (!lesson) return NO_NEEDS
+  return lessonNeeds(
+    lesson,
+    progressStore.state.charStats,
+    writingStore.state.charStats,
+    settingsStore.state
+  )
 }
 
 /**
@@ -136,7 +140,10 @@ function sessionTimeUp(): boolean {
  * section alone while it is being met, the whole unlocked pool once it is
  * familiar; in free mode it is exactly what the user ticked in the selector.
  */
-function currentPool(lessonStreak: number): {
+function currentPool(
+  lessonStreak: number,
+  narrow: boolean
+): {
   ids: Array<string>
   boost?: { ids: Set<string>; factor: number }
 } {
@@ -144,7 +151,28 @@ function currentPool(lessonStreak: number): {
   const lesson = currentLesson()
   if (!lesson) return { ids: selectedIds(selectionStore.state) }
 
-  return guidedPool(progression.track, lesson.index, gateStats(), lessonStreak)
+  return guidedPool(
+    progression.track,
+    lesson.index,
+    gateStats(),
+    lessonStreak,
+    narrow
+  )
+}
+
+/**
+ * How far through the current lesson the drill is — which decides what it may
+ * serve — or `null` in free mode, which has no lesson and so no stages.
+ */
+function currentStage(): LessonStageState | null {
+  const lesson = currentLesson()
+  if (!lesson) return null
+  return lessonStage(
+    lesson,
+    progressStore.state.charStats,
+    writingStore.state.charStats,
+    settingsStore.state
+  )
 }
 
 /**
@@ -238,38 +266,82 @@ export function useDrill() {
 
     const state = sessionStore.state
     const config = settingsStore.state
-    const { ids, boost } = currentPool(pacingStreak(state.lessonStreak))
+    const stage = currentStage()
+    const { ids, boost } = currentPool(
+      pacingStreak(state.lessonStreak),
+      stage !== null && isNarrowStage(stage.stage)
+    )
 
-    // Which exercise this prompt is. With both types on, they are served in
-    // blocks — several same-type prompts in a row (see lib/blocks.ts) — so the
-    // hand is not yanked between keyboard and pointer on every prompt. An
-    // in-flight confusion burst always finishes first, without consuming the
+    // Which exercise this prompt is.
+    //
+    // The lesson's stage decides what may be served at all: recognition first
+    // on reading alone, then the strokes over the guide on writing alone, and
+    // only once both have happened do the two mix (see lib/stages.ts).
+    //
+    // Where they do mix, they come in blocks — several same-type prompts in a
+    // row (see lib/blocks.ts) — so the hand is not yanked between keyboard and
+    // pointer on every prompt, and the runs are not a fixed 8-and-4: when one
+    // exercise is the only thing still holding the lesson back it gets the
+    // longer runs. A section read perfectly and never written is stuck, and no
+    // amount of further reading unsticks it.
+    //
+    // An in-flight confusion burst always finishes first, without consuming the
     // block: interleaving tracing into a discrimination sequence would defeat
     // its point.
+    const needs = currentNeeds()
+    const pending = {
+      read: needs.read.length > 0,
+      write: needs.write.length > 0,
+    }
     const writablepool = writableIds(ids)
     const burstActive = !!state.burst && state.burst.queue.length > 0
+    const allowed = stage ? STAGE_EXERCISES[stage.stage] : ["read", "write"]
+    const canRead = config.practiceReading && allowed.includes("read")
+    const canWrite =
+      config.practiceWriting &&
+      writablepool.length > 0 &&
+      allowed.includes("write")
+
     let exercise: ExerciseType
     let block = state.block
-    if (!config.practiceWriting || writablepool.length === 0) {
-      exercise = "read"
-      block = null
-    } else if (!config.practiceReading) {
+    if (canRead && canWrite) {
+      if (burstActive) {
+        exercise = "read"
+      } else {
+        const first = pending.write && !pending.read ? "write" : "read"
+        block = nextBlock(block, first, blockSizes(pending))
+        exercise = block.exercise
+      }
+    } else if (canWrite) {
       exercise = "write"
       block = null
-    } else if (burstActive) {
+    } else if (canRead) {
       exercise = "read"
+      block = null
     } else {
-      block = nextBlock(block, Math.random() < 0.5 ? "read" : "write")
-      exercise = block.exercise
+      // The stage asked for an exercise this session cannot serve — a writing
+      // stage with nothing writable in the pool. Fall back to what is on.
+      exercise =
+        config.practiceWriting && writablepool.length > 0 ? "write" : "read"
+      block = null
     }
 
     if (exercise === "write") {
+      // Writing gets its own boost rather than the pool's: the reading boost
+      // covers the whole lesson, while what a stuck lesson needs is the two or
+      // three characters that have never been written from memory. Without it
+      // the drill spreads its writing over everything unlocked so far and the
+      // section that is actually blocking barely comes up.
+      const owing = needs.write.filter((id) => writablepool.includes(id))
       const { pick } = nextKana(
         { lastShownId: state.lastShownId, burst: null, sinceBurst: 0 },
         writablepool,
         writingAsProgress(writingStore.state),
         config,
-        Math.random
+        Math.random,
+        owing.length > 0 && owing.length < writablepool.length
+          ? { ids: new Set(owing), factor: LESSON_BOOST_MAX }
+          : boost
       )
 
       // First time this kana is ever written — the drill demos the strokes.
@@ -727,6 +799,16 @@ export function useDrill() {
     return progressStore.state.groups[session.current.source.groupId] ?? null
   }, [session.current])
 
+  /** Which stage of the current lesson is being worked, or `null` in free mode. */
+  const journeyStage = useMemo(() => {
+    if (progression.mode !== "journey") return null
+    const lesson = lessonAt(
+      progression.track,
+      lessonOf(progression, progression.track)
+    )
+    return lessonStage(lesson, charStats, writeCharStats, settings)
+  }, [progression, charStats, writeCharStats, settings])
+
   /** Which phase the current lesson is in, or `null` outside guided mode. */
   const journeyPhase = useMemo(() => {
     if (progression.mode !== "journey") return null
@@ -756,6 +838,7 @@ export function useDrill() {
     kana,
     pool,
     journeyPhase,
+    journeyStage,
     limitMs,
     activeGroup,
     pushingPace,

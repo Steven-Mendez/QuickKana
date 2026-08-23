@@ -180,6 +180,12 @@ export const en = {
     accuracy: "Accuracy",
     bestStreak: "Best streak",
     learning: "Learning",
+    stage: {
+      read: "Recognize",
+      trace: "Trace",
+      recall: "From memory",
+      review: "Review",
+    },
     timeLeft: "Time",
     confirm: "confirm",
     end: "end",
