@@ -4,15 +4,18 @@ import { I18nextProvider } from "react-i18next"
 import { AppTourProvider } from "@/components/app-tour"
 import i18n from "@/lib/i18n"
 import { startAuthListener } from "@/stores/auth.store"
+import { startSyncEngine } from "@/lib/sync/engine"
 
 /**
  * App-wide providers, mounted in the root route's component (not the shell)
  * so the build-time shell render stays minimal.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Client-only: resolves the Supabase session (guests just stay signed out).
+  // Client-only: resolves the Supabase session (guests just stay signed out)
+  // and wires the sync engine to it.
   useEffect(() => {
     startAuthListener()
+    startSyncEngine()
   }, [])
   return (
     <I18nextProvider i18n={i18n}>

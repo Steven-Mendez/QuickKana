@@ -44,6 +44,15 @@ export const en = {
     signOutNote:
       "Signing out keeps this device's progress and returns to guest mode.",
   },
+  sync: {
+    syncing: "Syncing…",
+    synced: "Synced",
+    pending_one: "{{count}} answer waiting to sync",
+    pending_other: "{{count}} answers waiting to sync",
+    offline: "Offline — will sync when back online",
+    error: "Sync error — retrying",
+    lastSync: "Last sync {{time}}",
+  },
   theme: {
     system: "System theme",
     light: "Light theme",
@@ -370,6 +379,11 @@ export const en = {
     desc: "Clears attempt history, per-character stats, confusion matrix, active groups, journey, and streaks. Preferences and selection return to defaults. Cannot be undone.",
     cancel: "Cancel",
     confirm: "Yes, reset all",
+    remoteTitle: "Also delete cloud data",
+    remoteDesc:
+      "Removes your synced progress from your account. If off, the cloud copy comes back on the next sync.",
+    remoteError:
+      "Could not delete the cloud data. Nothing was deleted — check your connection and try again.",
   },
   welcome: {
     title: "Welcome to QuickKana",

@@ -6,6 +6,9 @@ import {
   scoreWriteAttempt,
 } from "@/lib/writing"
 import type { WriteAttempt } from "@/lib/writing"
+import { getKana } from "@/lib/kana"
+import { collectSessionEnd, collectWriteAnswer } from "@/lib/sync/queue"
+import { sessionStore } from "@/stores/session.store"
 import type { ProgressState, WriteCharStat, WritingState } from "@/lib/types"
 
 /**
@@ -80,14 +83,34 @@ export function recordWriteAnswer(
     },
   }))
 
+  // No-op for guests; while signed in it feeds the Supabase outbox.
+  collectWriteAnswer(
+    {
+      kanaId: input.kanaId,
+      expected: getKana(input.kanaId)?.romaji ?? "",
+      correct: outcome.correct,
+      mistakes: input.mistakes,
+      assisted: input.assisted,
+      outline: input.outline,
+      skipped: input.skipped,
+      fromMemory:
+        outcome.correct && !input.assisted && !input.outline && !input.skipped,
+      ms: input.ms,
+      sessionId: sessionStore.state.id,
+    },
+    now
+  )
+
   return outcome.correct
 }
 
-export const countWriteSession = () =>
+export const countWriteSession = () => {
   writingStore.setState((prev) => ({
     ...prev,
     totals: { ...prev.totals, sessions: prev.totals.sessions + 1 },
   }))
+  collectSessionEnd("writing")
+}
 
 export const resetWriting = () => writingStore.setState(() => emptyWriting())
 

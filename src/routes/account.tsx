@@ -13,7 +13,10 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { SyncIndicator } from "@/components/sync-indicator"
+import { flushNow } from "@/lib/sync/engine"
 import { authStore, signOut } from "@/stores/auth.store"
+import { syncStore } from "@/stores/sync.store"
 
 export const Route = createFileRoute("/account")({ component: AccountPage })
 
@@ -40,8 +43,9 @@ function AccountPage() {
     : null
 
   const handleSignOut = async () => {
-    // Local stores are untouched: the device keeps its data and the app
-    // falls back to guest mode.
+    // Best-effort flush first — after signOut the token is gone. Local
+    // stores are untouched: the device keeps its data in guest mode.
+    await flushNow({ force: true }).catch(() => undefined)
     await signOut()
     void navigate({ to: "/" })
   }
@@ -68,6 +72,7 @@ function AccountPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <SyncStatusRow />
           <Separator />
           <Button
             variant="outline"
@@ -83,5 +88,43 @@ function AccountPage() {
         </CardContent>
       </Card>
     </main>
+  )
+}
+
+function SyncStatusRow() {
+  const { t, i18n } = useTranslation()
+  const { status, pendingCount, lastSyncAt } = useSelector(syncStore, (s) => s)
+
+  const label = t(
+    (
+      {
+        guest: "sync.synced",
+        syncing: "sync.syncing",
+        synced: "sync.synced",
+        pending: "sync.pending",
+        offline: "sync.offline",
+        error: "sync.error",
+      } as const
+    )[status],
+    { count: pendingCount }
+  )
+
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="flex items-center gap-2">
+        <SyncIndicator />
+        {label}
+      </span>
+      {lastSyncAt ? (
+        <span className="text-xs text-muted-foreground">
+          {t("sync.lastSync", {
+            time: new Date(lastSyncAt).toLocaleTimeString(i18n.language, {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          })}
+        </span>
+      ) : null}
+    </div>
   )
 }

@@ -9,6 +9,7 @@ import { useSelector } from "@tanstack/react-store"
 import { useTranslation } from "react-i18next"
 import { authStore } from "@/stores/auth.store"
 import { LanguageToggle } from "@/components/language-toggle"
+import { SyncIndicator } from "@/components/sync-indicator"
 import { SoundToggle } from "@/components/sound-toggle"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -49,6 +50,7 @@ export function AppNav() {
           ))}
         </div>
 
+        <SyncIndicator />
         <LanguageToggle />
         <SoundToggle />
         <ThemeToggle />

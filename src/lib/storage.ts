@@ -7,6 +7,10 @@ export const STORAGE_KEYS = {
   progression: `${PREFIX}v1:progression`,
   writing: `${PREFIX}v1:writing`,
   history: `${PREFIX}v1:history`,
+  /** Outbox for the Supabase sync layer; only used while signed in. */
+  syncQueue: `${PREFIX}v1:sync-queue`,
+  /** Local snapshot saved right before the server state overwrites it. */
+  preSyncBackup: `${PREFIX}v1:pre-sync-backup`,
   /** One-shot flag, not a preference: the onboarding tour was dismissed once. */
   tourSeen: `${PREFIX}v1:tour-seen`,
   /** One-shot flag: the first-run welcome (language pick + intro) was completed. */

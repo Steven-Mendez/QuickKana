@@ -43,6 +43,15 @@ export const es: typeof en = {
     signOutNote:
       "Cerrar sesión conserva el progreso de este dispositivo y vuelve al modo invitado.",
   },
+  sync: {
+    syncing: "Sincronizando…",
+    synced: "Sincronizado",
+    pending_one: "{{count}} respuesta pendiente de sincronizar",
+    pending_other: "{{count}} respuestas pendientes de sincronizar",
+    offline: "Sin conexión — se sincronizará al volver",
+    error: "Error de sincronización — reintentando",
+    lastSync: "Última sincronización {{time}}",
+  },
   theme: {
     system: "Tema del sistema",
     light: "Tema claro",
@@ -369,6 +378,11 @@ export const es: typeof en = {
     desc: "Elimina el historial de intentos, las estadísticas por carácter, la matriz de confusión, los grupos activos, el camino y las rachas. Las preferencias y la selección vuelven a sus valores por defecto. No se puede deshacer.",
     cancel: "Cancelar",
     confirm: "Sí, borrar todo",
+    remoteTitle: "Borrar también los datos en la nube",
+    remoteDesc:
+      "Elimina el progreso sincronizado de tu cuenta. Si lo desactivas, la copia en la nube volverá en la próxima sincronización.",
+    remoteError:
+      "No se pudieron borrar los datos en la nube. No se borró nada — revisa tu conexión e inténtalo de nuevo.",
   },
   welcome: {
     title: "Te damos la bienvenida a QuickKana",

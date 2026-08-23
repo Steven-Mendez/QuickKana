@@ -7,6 +7,7 @@ import {
   recordTypo,
 } from "@/lib/confusion"
 import { emptyCharStat, nextWeight } from "@/lib/scheduler"
+import { collectReadingAnswer, collectSessionEnd } from "@/lib/sync/queue"
 import type { AttemptRecord, ProgressState, Settings } from "@/lib/types"
 
 const HISTORY_LIMIT = 2000
@@ -143,6 +144,9 @@ export function recordAnswer(
     return next.length > HISTORY_LIMIT ? next.slice(-HISTORY_LIMIT) : next
   })
 
+  // No-op for guests; while signed in it feeds the Supabase outbox.
+  collectReadingAnswer(input, now)
+
   return { graduated }
 }
 
@@ -161,11 +165,13 @@ export const rebuildGroupsFromSettings = (
     groups: rebuildGroups(prev, settings, now),
   }))
 
-export const countSession = () =>
+export const countSession = () => {
   progressStore.setState((prev) => ({
     ...prev,
     totals: { ...prev.totals, sessions: prev.totals.sessions + 1 },
   }))
+  collectSessionEnd("reading")
+}
 
 export const resetProgress = () => {
   progressStore.setState(() => emptyProgress())
