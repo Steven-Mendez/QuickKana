@@ -43,6 +43,12 @@ export const en = {
     signOut: "Sign out",
     signOutNote:
       "Signing out keeps this device's progress and returns to guest mode.",
+    delete: "Delete account",
+    deleteTitle: "Delete your account?",
+    deleteDesc:
+      "Deletes your account and all synced progress from the cloud, and clears this device. Cannot be undone.",
+    deleteConfirm: "Yes, delete my account",
+    deleteError: "Could not delete the account. Try again.",
   },
   sync: {
     syncing: "Syncing…",

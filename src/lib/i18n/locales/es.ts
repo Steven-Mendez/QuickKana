@@ -42,6 +42,12 @@ export const es: typeof en = {
     signOut: "Cerrar sesión",
     signOutNote:
       "Cerrar sesión conserva el progreso de este dispositivo y vuelve al modo invitado.",
+    delete: "Eliminar cuenta",
+    deleteTitle: "¿Eliminar tu cuenta?",
+    deleteDesc:
+      "Elimina tu cuenta y todo el progreso sincronizado de la nube, y limpia este dispositivo. No se puede deshacer.",
+    deleteConfirm: "Sí, eliminar mi cuenta",
+    deleteError: "No se pudo eliminar la cuenta. Inténtalo de nuevo.",
   },
   sync: {
     syncing: "Sincronizando…",

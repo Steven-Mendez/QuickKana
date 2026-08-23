@@ -1,8 +1,8 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useSelector } from "@tanstack/react-store"
 import { useTranslation } from "react-i18next"
-import { LogOut } from "lucide-react"
+import { LogOut, UserRoundX } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -12,10 +12,27 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { SyncIndicator } from "@/components/sync-indicator"
+import { clearAllStorage } from "@/lib/storage"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { flushNow } from "@/lib/sync/engine"
 import { authStore, signOut } from "@/stores/auth.store"
+import { resetProgress } from "@/stores/progress.store"
+import { resetProgression } from "@/stores/progression.store"
+import { resetSelection } from "@/stores/selection.store"
+import { resetSettings } from "@/stores/settings.store"
+import { resetWriting } from "@/stores/writing.store"
 import { syncStore } from "@/stores/sync.store"
 
 export const Route = createFileRoute("/account")({ component: AccountPage })
@@ -85,9 +102,80 @@ function AccountPage() {
           <p className="text-xs text-muted-foreground">
             {t("account.signOutNote")}
           </p>
+          <Separator />
+          <DeleteAccount />
         </CardContent>
       </Card>
     </main>
+  )
+}
+
+/** Calls the delete-account Edge Function, then wipes the device too —
+ * keeping a local copy of a deleted account would defeat the point. */
+function DeleteAccount() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  const deleteAccount = async () => {
+    setBusy(true)
+    setFailed(false)
+    const supabase = getSupabaseBrowserClient()
+    const { error } = await supabase.functions.invoke("delete-account", {
+      method: "POST",
+    })
+    if (error) {
+      setFailed(true)
+      setBusy(false)
+      return
+    }
+    await supabase.auth.signOut().catch(() => undefined)
+    clearAllStorage()
+    resetProgress()
+    resetProgression()
+    resetSelection()
+    resetSettings()
+    resetWriting()
+    void navigate({ to: "/" })
+  }
+
+  return (
+    <div className="space-y-2">
+      <Dialog>
+        <DialogTrigger
+          render={
+            <Button variant="destructive" className="w-full">
+              <UserRoundX />
+              {t("account.delete")}
+            </Button>
+          }
+        />
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("account.deleteTitle")}</DialogTitle>
+            <DialogDescription>{t("account.deleteDesc")}</DialogDescription>
+          </DialogHeader>
+          {failed ? (
+            <p role="alert" className="text-sm text-destructive">
+              {t("account.deleteError")}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <DialogClose
+              render={<Button variant="outline">{t("reset.cancel")}</Button>}
+            />
+            <Button
+              variant="destructive"
+              disabled={busy}
+              onClick={() => void deleteAccount()}
+            >
+              {t("account.deleteConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
 

@@ -6,6 +6,8 @@
     "prettier.config.js",
     "vite.config.ts"
   ],
+  // Edge Functions are Deno code with their own runtime types.
+  "exclude": ["node_modules", "dist", "supabase"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

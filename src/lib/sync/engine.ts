@@ -14,6 +14,7 @@ import { emptyPending, hasPendingData } from "./types"
 const FLUSH_INTERVAL_MS = 10_000
 const BASE_BACKOFF_MS = 5_000
 const MAX_BACKOFF_MS = 5 * 60_000
+const REALTIME_PULL_DEBOUNCE_MS = 2_000
 
 let started = false
 let timer: ReturnType<typeof setInterval> | null = null
@@ -21,6 +22,8 @@ let flushing = false
 let failures = 0
 let nextAttemptAt = 0
 let onboardedUserId: string | null = null
+let realtimeChannel: { unsubscribe: () => unknown } | null = null
+let realtimePullTimer: ReturnType<typeof setTimeout> | null = null
 
 function updateStatus(partial?: { syncing?: boolean; error?: boolean }): void {
   const { pending, inflight } = queueStore.state
@@ -113,10 +116,63 @@ async function onboard(userId: string): Promise<void> {
     onboardedUserId = userId
     syncStore.setState((prev) => ({ ...prev, lastSyncAt: Date.now() }))
     updateStatus()
+    subscribeRealtime(userId)
   } catch {
     // Retried on the next tick; practicing meanwhile keeps queueing safely.
     registerFailure()
     updateStatus({ error: true })
+  }
+}
+
+/**
+ * Live multi-device updates: a change on any synced table (pushed by
+ * another device — or by this one, which the debounce + idle check make a
+ * cheap no-op) schedules a pull. The pull only runs while the outbox is
+ * empty: replacing local state with the server's while answers are still
+ * queued here would show the user a state that briefly forgets them.
+ */
+function subscribeRealtime(userId: string): void {
+  if (realtimeChannel) return
+  const supabase = getSupabaseBrowserClient()
+
+  const schedulePull = () => {
+    if (realtimePullTimer) clearTimeout(realtimePullTimer)
+    realtimePullTimer = setTimeout(() => {
+      realtimePullTimer = null
+      const { pending, inflight } = queueStore.state
+      if (hasPendingData(pending) || inflight) return
+      pullAll()
+        .then(() => updateStatus())
+        .catch(() => undefined)
+    }, REALTIME_PULL_DEBOUNCE_MS)
+  }
+
+  let channel = supabase.channel(`sync:${userId}`)
+  for (const table of [
+    "char_stats",
+    "writing_char_stats",
+    "confusion_groups",
+    "progression",
+    "user_settings",
+  ]) {
+    channel = channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table, filter: `user_id=eq.${userId}` },
+      schedulePull
+    )
+  }
+  channel.subscribe()
+  realtimeChannel = channel
+}
+
+function unsubscribeRealtime(): void {
+  if (realtimePullTimer) {
+    clearTimeout(realtimePullTimer)
+    realtimePullTimer = null
+  }
+  if (realtimeChannel) {
+    void realtimeChannel.unsubscribe()
+    realtimeChannel = null
   }
 }
 
@@ -145,6 +201,7 @@ function handleAuthChange(): void {
       clearInterval(timer)
       timer = null
     }
+    unsubscribeRealtime()
     // The queue is kept: it still belongs to the signed-out user and resumes
     // if they come back (a *different* user signing in drops it).
     setQueueUser(null)

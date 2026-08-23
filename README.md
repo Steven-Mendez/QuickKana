@@ -152,7 +152,8 @@ Never `supabase db push` without explicit confirmation.
 - ✅ Postgres + declarative schemas + generated migrations, Auth (email +
   Google, PKCE via `@supabase/ssr`), RLS everywhere, RPCs
   (`sync_push`, `import_local_snapshot`, `delete_user_data`), generated
-  TypeScript types, local CLI stack. Realtime and a `delete-account` Edge
-  Function arrive with the sync phases.
+  TypeScript types, local CLI stack, Realtime (`postgres_changes` filtered
+  by user for live multi-device updates), and a `delete-account` Edge
+  Function (the only place a secret key ever exists).
 - ⛔ Storage, Vault, pg_cron, Queues — no current use case; revisit if one
   appears (e.g. Storage for user-drawn stroke exports).
