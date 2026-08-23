@@ -117,6 +117,11 @@ Ver la sección "Dashboard configuration" del README: Site URL + redirect
 `https://<origin>/auth/callback`, provider de Google, y plantillas de email
 apuntando a `/auth/confirm?token_hash={{ .TokenHash }}&type=…`.
 
+**Nota de despliegue**: producción es un SPA estático (vercel.json reescribe
+todo a `_shell.html`), así que `/auth/callback` y `/auth/confirm` se
+resuelven en el navegador (`exchangeCodeForSession` / `verifyOtp` del
+cliente); no hay rutas de servidor en Vercel.
+
 ## Verificación
 
 - `SUPABASE_IT=1 pnpm test` — E2E contra el stack local: import una sola

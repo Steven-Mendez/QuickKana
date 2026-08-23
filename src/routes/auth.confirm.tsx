@@ -1,5 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { createServerSupabase } from "@/lib/supabase/server"
+import { useEffect } from "react"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { useTranslation } from "react-i18next"
+
+import {
+  getSupabaseBrowserClient,
+  isSupabaseConfigured,
+} from "@/lib/supabase/client"
 import type { EmailOtpType } from "@supabase/supabase-js"
 
 const OTP_TYPES: ReadonlyArray<string> = [
@@ -11,41 +17,72 @@ const OTP_TYPES: ReadonlyArray<string> = [
   "email",
 ]
 
-const isOtpType = (value: string | null): value is EmailOtpType =>
-  value !== null && OTP_TYPES.includes(value)
+const isOtpType = (value: string | undefined): value is EmailOtpType =>
+  value !== undefined && OTP_TYPES.includes(value)
 
-function safeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/"
-  return raw
+interface ConfirmSearch {
+  token_hash?: string
+  type?: string
 }
 
-const redirectTo = (location: string) =>
-  new Response(null, { status: 303, headers: { Location: location } })
-
 /**
- * Email link landing (confirmation, recovery, email change). The production
- * email templates must point here with ?token_hash={{ .TokenHash }}&type=…
- * — see docs/supabase.md.
+ * Email link landing (confirmation, recovery, email change), resolved in
+ * the browser — the production deploy is a static SPA with no server.
+ * The email templates must point here with
+ * ?token_hash={{ .TokenHash }}&type=… — see docs/supabase.md.
  */
 export const Route = createFileRoute("/auth/confirm")({
-  server: {
-    handlers: {
-      GET: async ({ request }) => {
-        const url = new URL(request.url)
-        const tokenHash = url.searchParams.get("token_hash")
-        const type = url.searchParams.get("type")
-        const next = safeNext(url.searchParams.get("next"))
-
-        if (tokenHash && isOtpType(type)) {
-          const { supabase, applyCookies } = createServerSupabase(request)
-          const { error } = await supabase.auth.verifyOtp({
-            type,
-            token_hash: tokenHash,
-          })
-          if (!error) return applyCookies(redirectTo(next))
-        }
-        return redirectTo("/auth/login?error=confirm")
-      },
-    },
-  },
+  validateSearch: (search: Record<string, unknown>): ConfirmSearch => ({
+    token_hash:
+      typeof search.token_hash === "string" ? search.token_hash : undefined,
+    type: typeof search.type === "string" ? search.type : undefined,
+  }),
+  component: ConfirmPage,
 })
+
+function ConfirmPage() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { token_hash: tokenHash, type } = Route.useSearch()
+
+  useEffect(() => {
+    let cancelled = false
+    const finish = (ok: boolean) => {
+      if (cancelled) return
+      if (ok) void navigate({ to: "/", replace: true })
+      else {
+        void navigate({
+          to: "/auth/login",
+          search: { error: "confirm" },
+          replace: true,
+        })
+      }
+    }
+
+    const run = async () => {
+      if (!tokenHash || !isOtpType(type) || !isSupabaseConfigured()) {
+        return finish(false)
+      }
+      const supabase = getSupabaseBrowserClient()
+      const { error } = await supabase.auth.verifyOtp({
+        type,
+        token_hash: tokenHash,
+      })
+      if (!error) return finish(true)
+      // An already-used link on a browser that is signed in is a success.
+      const { data } = await supabase.auth.getSession()
+      finish(Boolean(data.session))
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+    // Deliberately mount-only: the link params never change in-page.
+  }, [])
+
+  return (
+    <main className="mx-auto max-w-sm px-4 py-12">
+      <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+    </main>
+  )
+}
