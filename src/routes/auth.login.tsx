@@ -15,7 +15,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import {
+  getSupabaseBrowserClient,
+  isSupabaseConfigured,
+} from "@/lib/supabase/client"
 import { authStore } from "@/stores/auth.store"
 
 interface LoginSearch {
@@ -53,6 +56,10 @@ function LoginPage() {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (!isSupabaseConfigured()) {
+      setError("auth.errorNotConfigured")
+      return
+    }
     setBusy(true)
     setError(null)
     const supabase = getSupabaseBrowserClient()
@@ -85,6 +92,10 @@ function LoginPage() {
   }
 
   const signInWithGoogle = async () => {
+    if (!isSupabaseConfigured()) {
+      setError("auth.errorNotConfigured")
+      return
+    }
     setBusy(true)
     setError(null)
     const supabase = getSupabaseBrowserClient()

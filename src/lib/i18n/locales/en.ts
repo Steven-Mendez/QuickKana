@@ -33,6 +33,8 @@ export const en = {
     errorWeakPassword: "Password must be at least 8 characters.",
     errorGoogle: "Could not start Google sign-in. Try again.",
     errorCallback: "Sign-in link failed or expired. Try again.",
+    errorNotConfigured:
+      "Accounts are not available in this deployment. Your progress still works locally.",
   },
   account: {
     title: "Account",

@@ -31,6 +31,8 @@ export const es: typeof en = {
     errorWeakPassword: "La contraseña debe tener al menos 8 caracteres.",
     errorGoogle: "No se pudo iniciar sesión con Google. Inténtalo de nuevo.",
     errorCallback: "El enlace falló o expiró. Inténtalo de nuevo.",
+    errorNotConfigured:
+      "Las cuentas no están disponibles en este despliegue. Tu progreso sigue funcionando en local.",
   },
   account: {
     title: "Cuenta",
