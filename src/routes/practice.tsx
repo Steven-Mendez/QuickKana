@@ -11,6 +11,7 @@ import { DrillCard } from "@/components/drill-card"
 import { SessionSummary } from "@/components/session-summary"
 import { WriteDrillCard } from "@/components/write-drill-card"
 import { useDrill } from "@/hooks/use-drill"
+import { useKeyboardInset } from "@/hooks/use-keyboard-inset"
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
 import { lessonAt, lessonById } from "@/lib/journey"
 import { lessonOf, progressionStore } from "@/stores/progression.store"
@@ -21,10 +22,24 @@ import type { ExerciseType } from "@/lib/types"
 
 export const Route = createFileRoute("/practice")({ component: Practice })
 
-/** Fills the viewport below the 3.5rem nav (plus the notch inset the nav
-    absorbs) so the kana can sit dead centre. */
-const FULL_HEIGHT =
-  "min-h-[calc(100dvh-3.5rem-env(safe-area-inset-top))]"
+/**
+ * The drill fills the viewport below the nav (3.5rem plus its hairline border,
+ * plus the notch inset it absorbs — a pixel over and the page becomes
+ * scrollable, which on iOS means rubber-banding and a jittering toolbar) so the
+ * kana sits dead centre. `--keyboard-inset` is 0 until a
+ * soft keyboard comes up; then it is the height that keyboard covers, and the
+ * same figure becomes a hard cap — the column shrinks into the strip that is
+ * still on screen instead of hanging behind the keys.
+ *
+ * Literal class strings, one per line: Tailwind scans the source text, so an
+ * interpolated template would compile to nothing.
+ */
+const FULL_HEIGHT = [
+  "min-h-[calc(100dvh-3.5rem-1px-env(safe-area-inset-top)-var(--keyboard-inset,0px))]",
+  "kb-open:h-[calc(100dvh-3.5rem-1px-env(safe-area-inset-top)-var(--keyboard-inset,0px))]",
+  "kb-open:min-h-0",
+  "kb-open:overflow-hidden",
+].join(" ")
 
 /**
  * One drill, two kinds of prompt: reading (type the rōmaji) and writing
@@ -59,6 +74,13 @@ function Practice() {
     progressionStore,
     (s) => s.records.bestSessionStreak
   )
+  const keyboardOpen = useKeyboardInset()
+
+  // The layout now fits above the keyboard on its own, so any scrolling iOS did
+  // to chase the focused field is stale — and leaves the nav off screen.
+  useEffect(() => {
+    if (keyboardOpen) window.scrollTo({ top: 0 })
+  }, [keyboardOpen])
 
   // The user clicked their way here, so the AudioContext can unlock and the
   // clips can be fetched before the first answer needs one.
@@ -189,9 +211,13 @@ function Practice() {
 
           {/* Everything that is not the drill lives down here, out of the way.
               Phones get a centred stat strip with the actions full-width under
-              it; from sm up it is the classic left-stats / right-buttons row. */}
-          <footer className="mx-auto flex w-full max-w-4xl flex-col gap-3 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-6 sm:gap-y-2 sm:pt-5 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-            <div className="flex flex-wrap items-start justify-center gap-x-6 gap-y-2 tabular-nums sm:items-center sm:justify-start sm:gap-x-4 sm:gap-y-1">
+              it; from sm up it is the classic left-stats / right-buttons row.
+              With the keyboard up the room is measured in tens of pixels, so
+              the stats step aside and only the two actions stay — kept clear of
+              the bottom edge, where Safari parks its floating address pill on
+              top of the page. */}
+          <footer className="mx-auto flex w-full max-w-4xl flex-col gap-3 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] text-xs text-muted-foreground kb-open:pt-2 kb-open:pb-14 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-6 sm:gap-y-2 sm:pt-5 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+            <div className="flex flex-wrap items-start justify-center gap-x-6 gap-y-2 tabular-nums kb-open:hidden sm:items-center sm:justify-start sm:gap-x-4 sm:gap-y-1">
               {settings.sessionLimitEnabled && (
                 <SessionClock
                   startedAt={session.startedAt}

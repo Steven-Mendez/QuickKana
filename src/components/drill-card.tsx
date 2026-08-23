@@ -67,7 +67,7 @@ export function DrillCard({
   const isRetry = session.phase === "retry"
 
   return (
-    <div className="relative mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center gap-7">
+    <div className="relative mx-auto flex w-full max-w-xl min-h-0 flex-1 flex-col items-center justify-center gap-7 kb-open:gap-4">
       {/* Pinned to the drill column rather than the viewport: at the edge of a
           wide screen the counter is out of the field of view entirely. */}
       <StreakCounter streak={session.streak} record={recordStreak} />
@@ -102,7 +102,7 @@ export function DrillCard({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.12, scale: { duration: 0.18 } }}
           className={cn(
-            "kana-display font-jp text-[7rem] leading-none transition-colors duration-200 sm:text-[10rem]",
+            "kana-display font-jp text-[7rem] leading-none transition-colors duration-200 kb-open:text-[5rem] sm:text-[10rem]",
             isCorrect && "text-emerald-600 dark:text-emerald-400",
             isRetry && "text-destructive"
           )}

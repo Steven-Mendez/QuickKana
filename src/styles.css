@@ -5,6 +5,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* On-screen keyboard is up — see `useKeyboardInset`, which sets the flag and
+   the `--keyboard-inset` height it covers. */
+@custom-variant kb-open (&:is(html[data-keyboard="open"] *));
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Inter Variable', sans-serif;
