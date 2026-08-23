@@ -203,6 +203,17 @@ export interface Burst {
   queue: Array<string>
 }
 
+/**
+ * A same-type run of prompts. Reading is answered on the keyboard and writing
+ * with the pointer, so the drill serves each type in blocks instead of
+ * flipping a coin per prompt — the hand stays on one input device for a while.
+ */
+export interface ExerciseBlock {
+  exercise: ExerciseType
+  /** Prompts left in the run after the current one. */
+  left: number
+}
+
 export type DrillPhase = "prompt" | "correct" | "retry"
 
 export interface SessionState {
@@ -224,6 +235,8 @@ export interface SessionState {
   timedOut: boolean
   lastShownId: string | null
   burst: Burst | null
+  /** The same-type run being served, or `null` while only one type is on. */
+  block: ExerciseBlock | null
   /** General-pool items served since the last burst ended. */
   sinceBurst: number
   attempts: number

@@ -36,10 +36,16 @@ export interface KanaWritingCanvasHandle {
   showDemo: () => void
   /** Cuts a running demo short and starts the quiz right away. */
   skipDemo: () => void
-  /** Clears everything drawn and quizzes the character from stroke one. */
-  restartQuiz: () => void
   /** Shows the finished character (the reveal after the last failed try). */
   revealCharacter: () => void
+}
+
+/** What went wrong on a rejected stroke, for feedback the user can act on. */
+export interface StrokeMistake {
+  /** Zero-based index of the stroke that was expected. */
+  strokeNum: number
+  /** The shape matched but was drawn from the wrong end. */
+  isBackwards: boolean
 }
 
 interface KanaWritingCanvasProps {
@@ -51,7 +57,7 @@ interface KanaWritingCanvasProps {
   /** Parent turns the completion flash off under prefers-reduced-motion. */
   highlightOnComplete: boolean
   onCorrectStroke?: (strokeNum: number) => void
-  onMistake?: () => void
+  onMistake?: (mistake: StrokeMistake) => void
   onComplete: (result: { totalMistakes: number }) => void
   /** Stroke data failed to load — the drill should skip this character. */
   onLoadError?: (char: string) => void
@@ -122,13 +128,22 @@ export function KanaWritingCanvas({
     void writer.quiz({
       leniency: latest.current.leniency,
       highlightOnComplete: latest.current.highlightOnComplete,
+      // Every rejected stroke flashes the stroke that was expected — the
+      // whole point is that the user learns what to fix, not just that
+      // something was wrong.
+      showHintAfterMisses: 1,
       onCorrectStroke: (strokeData) => {
         if (latest.current.char === shown) {
           latest.current.onCorrectStroke?.(strokeData.strokeNum)
         }
       },
-      onMistake: () => {
-        if (latest.current.char === shown) latest.current.onMistake?.()
+      onMistake: (strokeData) => {
+        if (latest.current.char === shown) {
+          latest.current.onMistake?.({
+            strokeNum: strokeData.strokeNum,
+            isBackwards: strokeData.isBackwards,
+          })
+        }
       },
       onComplete: (summary) => {
         if (latest.current.char === shown) {
@@ -278,12 +293,6 @@ export function KanaWritingCanvas({
         const writer = writerRef.current
         if (!writer || demoRequestedRef.current === null) return
         endDemo(writer, 0)
-      },
-      restartQuiz: () => {
-        const writer = writerRef.current
-        if (!writer) return
-        writer.cancelQuiz()
-        startQuiz()
       },
       revealCharacter: () => {
         const writer = writerRef.current

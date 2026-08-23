@@ -161,6 +161,8 @@ export const es: typeof en = {
     watchStrokes: "mira el orden de los trazos",
     completedWithMistakes: "<jp>{{char}}</jp> — algunos trazos fallaron",
     itWas: "Era <jp>{{char}}</jp>",
+    strokeBackwards: "Trazo {{num}} al revés — empieza por el otro extremo",
+    strokeMismatch: "El trazo {{num}} no era así — fíjate en el destello",
     triesLeft_one: "{{count}} intento restante",
     triesLeft_other: "{{count}} intentos restantes",
     ariaCanvas: "Traza el kana de {{romaji}}",
@@ -183,6 +185,8 @@ export const es: typeof en = {
     skip: "Saltar",
     finish: "Terminar",
     unlockBanner: "Lección {{number}} desbloqueada ·",
+    nowWriting: "Ahora: escritura",
+    nowReading: "Ahora: lectura",
   },
   summary: {
     complete: "Sesión completada",

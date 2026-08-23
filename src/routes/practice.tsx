@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link, createFileRoute } from "@tanstack/react-router"
-import { ArrowRight, Flag, PartyPopper } from "lucide-react"
+import { ArrowRight, Flag, Keyboard, PartyPopper, Pencil } from "lucide-react"
 import { useSelector } from "@tanstack/react-store"
 import { AnimatePresence, motion } from "motion/react"
 import { useTranslation } from "react-i18next"
@@ -17,6 +17,7 @@ import { lessonOf, progressionStore } from "@/stores/progression.store"
 import { preloadEffects } from "@/lib/sound"
 import { formatPercent } from "@/lib/stats"
 import { cn } from "@/lib/utils"
+import type { ExerciseType } from "@/lib/types"
 
 export const Route = createFileRoute("/practice")({ component: Practice })
 
@@ -62,6 +63,27 @@ function Practice() {
   useEffect(() => {
     preloadEffects()
   }, [])
+
+  // A heads-up the moment the prompt type flips: the next stretch runs on the
+  // other input device (keyboard ↔ pointer), and silently swapping the card
+  // is easy to miss mid-flow.
+  const [deviceSwitch, setDeviceSwitch] = useState<{
+    exercise: ExerciseType
+    at: number
+  } | null>(null)
+  const prevExerciseRef = useRef<ExerciseType | null>(null)
+  useEffect(() => {
+    prevExerciseRef.current = null
+    setDeviceSwitch(null)
+  }, [session.id])
+  useEffect(() => {
+    if (!session.current) return
+    const prev = prevExerciseRef.current
+    prevExerciseRef.current = session.exercise
+    if (prev !== null && prev !== session.exercise) {
+      setDeviceSwitch({ exercise: session.exercise, at: session.shownAt })
+    }
+  }, [session.exercise, session.shownAt, session.current])
 
   // Esc ends the session from anywhere, including while the input has focus.
   useEffect(() => {
@@ -121,6 +143,13 @@ function Practice() {
         >
           {justUnlocked !== undefined && (
             <UnlockBanner key={justUnlocked} lessonId={justUnlocked} />
+          )}
+
+          {deviceSwitch !== null && (
+            <DeviceSwitchPill
+              key={deviceSwitch.at}
+              exercise={deviceSwitch.exercise}
+            />
           )}
 
           {kana ? (
@@ -255,6 +284,45 @@ function UnlockBanner({ lessonId }: { lessonId: string }) {
             <PartyPopper className="size-4" />
             {t("practice.unlockBanner", { number: next.index + 1 })}{" "}
             <span className="font-jp">{next.chars.join(" ")}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/**
+ * Announces that the drill just switched between reading and writing — i.e.
+ * between keyboard and pointer. Transient like the unlock banner, and sits a
+ * step below it so the two never cover each other.
+ */
+function DeviceSwitchPill({ exercise }: { exercise: ExerciseType }) {
+  const { t } = useTranslation()
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    const id = setTimeout(() => setVisible(false), 2500)
+    return () => clearTimeout(id)
+  }, [])
+
+  const Icon = exercise === "write" ? Pencil : Keyboard
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-28 z-20 flex justify-center px-4">
+      <AnimatePresence>
+        {visible && (
+          <motion.div
+            initial={{ y: -12, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -6, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-sm text-primary shadow-sm backdrop-blur"
+          >
+            <Icon className="size-4" />
+            {t(
+              exercise === "write"
+                ? "practice.nowWriting"
+                : "practice.nowReading"
+            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -5,6 +5,7 @@ import { isCorrect } from "@/lib/kana/romaji"
 import { isWritable, writableIds } from "@/lib/kana/strokes"
 import { needsOutline } from "@/lib/writing"
 import { lessonAt, lessonPhase, poolUpTo } from "@/lib/journey"
+import { nextBlock } from "@/lib/blocks"
 import { guidedPool } from "@/lib/drill-pool"
 import { milestoneAt, timeLimitFor } from "@/lib/pressure"
 import { isPushingPace } from "@/lib/momentum"
@@ -179,14 +180,17 @@ function nextLessonStreak(
  * One drill, two kinds of prompt. Reading and writing are both part of
  * learning a kana, so a session mixes them: each advance picks an exercise
  * type (either can be turned off in settings, never both) and then a
- * character from that exercise's own adaptive stats.
+ * character from that exercise's own adaptive stats. The types come in
+ * same-type blocks (see lib/blocks.ts), because reading is answered on the
+ * keyboard and writing with the pointer.
  *
  * Reading keeps everything it always had — confusion bursts, lesson pacing,
  * the timed mode. Writing deliberately reuses none of those: bursts and
  * pairing are typing concepts, and a clock over handwriting punishes careful
  * strokes. What writing brings is its own scoring (see lib/writing.ts) and
- * the three-tries rule: a wrong stroke restarts the character, and the third
- * wrong stroke fails it and reveals the answer.
+ * the three-tries rule: a wrong stroke keeps the strokes already accepted
+ * and costs a try, and the third wrong stroke fails the character and
+ * reveals the answer.
  *
  * Both exercises move the same journey: gates are judged on the merged
  * best-of-both stats, and — when both types are on — a lesson only passes
@@ -236,16 +240,28 @@ export function useDrill() {
     const config = settingsStore.state
     const { ids, boost } = currentPool(pacingStreak(state.lessonStreak))
 
-    // Which exercise this prompt is. An in-flight confusion burst always
-    // finishes first — interleaving tracing into a discrimination sequence
-    // would defeat its point.
+    // Which exercise this prompt is. With both types on, they are served in
+    // blocks — several same-type prompts in a row (see lib/blocks.ts) — so the
+    // hand is not yanked between keyboard and pointer on every prompt. An
+    // in-flight confusion burst always finishes first, without consuming the
+    // block: interleaving tracing into a discrimination sequence would defeat
+    // its point.
     const writablepool = writableIds(ids)
     const burstActive = !!state.burst && state.burst.queue.length > 0
     let exercise: ExerciseType
-    if (!config.practiceWriting || writablepool.length === 0) exercise = "read"
-    else if (!config.practiceReading) exercise = "write"
-    else if (burstActive) exercise = "read"
-    else exercise = Math.random() < 0.5 ? "read" : "write"
+    let block = state.block
+    if (!config.practiceWriting || writablepool.length === 0) {
+      exercise = "read"
+      block = null
+    } else if (!config.practiceReading) {
+      exercise = "write"
+      block = null
+    } else if (burstActive) {
+      exercise = "read"
+    } else {
+      block = nextBlock(block, Math.random() < 0.5 ? "read" : "write")
+      exercise = block.exercise
+    }
 
     if (exercise === "write") {
       const { pick } = nextKana(
@@ -264,10 +280,12 @@ export function useDrill() {
 
       writePrompt.current = { mistakes: 0, assisted: false, outline }
       setWriteOutline(outline)
-      // Only lastShownId moves: a paused read burst must survive the detour.
+      // Only lastShownId and the block move: a paused read burst must survive
+      // the detour.
       sessionStore.setState((prev) => ({
         ...prev,
         lastShownId: pick?.id ?? prev.lastShownId,
+        block,
       }))
       showPick(pick, introducing, "write")
       return
@@ -291,7 +309,7 @@ export function useDrill() {
     const introducing =
       !!pick && (progressStore.state.charStats[pick.id]?.attempts ?? 0) === 0
 
-    sessionStore.setState((prev) => ({ ...prev, ...schedulerState }))
+    sessionStore.setState((prev) => ({ ...prev, ...schedulerState, block }))
     showPick(pick, introducing, "read")
   }, [])
 
@@ -513,9 +531,9 @@ export function useDrill() {
   }, [])
 
   /**
-   * A wrong stroke. Returns what the canvas should do next: clear and retry
-   * from stroke one, or — after the third failure — reveal the answer while
-   * the miss is recorded.
+   * A wrong stroke. Returns what the canvas should do next: keep quizzing so
+   * the same stroke can be retried, or — after the third failure — reveal the
+   * answer while the miss is recorded.
    */
   const strokeMistake = useCallback((): "retry" | "failed" => {
     const state = sessionStore.state

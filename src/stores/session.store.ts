@@ -15,6 +15,7 @@ const newSession = (): SessionState => ({
   timedOut: false,
   lastShownId: null,
   burst: null,
+  block: null,
   sinceBurst: 0,
   attempts: 0,
   correct: 0,

@@ -13,7 +13,10 @@ import { StreakCounter } from "@/components/drill-card"
 import { KanaWritingCanvas } from "@/components/kana-writing-canvas"
 import { WRITE_MAX_TRIES } from "@/hooks/use-drill"
 import { cn } from "@/lib/utils"
-import type { KanaWritingCanvasHandle } from "@/components/kana-writing-canvas"
+import type {
+  KanaWritingCanvasHandle,
+  StrokeMistake,
+} from "@/components/kana-writing-canvas"
 import type { Kana, SessionState, Settings } from "@/lib/types"
 
 interface WriteDrillCardProps {
@@ -49,8 +52,9 @@ function useCanvasSize(): number {
 /**
  * The writing prompt: rōmaji where the reading drill shows the kana, the
  * tracing canvas where it has the input. Three tries per character — a wrong
- * stroke clears the canvas and costs one — with the same chrome around both
- * drills.
+ * stroke costs one, the strokes already accepted stay put, the expected
+ * stroke flashes, and a line under the canvas says what went wrong — with the
+ * same chrome around both drills.
  */
 export function WriteDrillCard({
   kana,
@@ -76,11 +80,15 @@ export function WriteDrillCard({
   const [demoActive, setDemoActive] = useState(false)
   const [failedTries, setFailedTries] = useState(0)
   const failed = failedTries >= WRITE_MAX_TRIES
+  // The last rejected stroke, so the feedback line can say what went wrong.
+  // Cleared by the next accepted stroke: the advice has been followed.
+  const [mistake, setMistake] = useState<StrokeMistake | null>(null)
 
   // Per-prompt UI state starts clean with each character.
   useEffect(() => {
     setFailedTries(0)
     setDemoActive(false)
+    setMistake(null)
   }, [promptKey])
 
   // First-ever sighting of a character: play the stroke-order demo once,
@@ -153,12 +161,16 @@ export function WriteDrillCard({
           showOutline={outline}
           leniency={settings.writeLeniency}
           highlightOnComplete={!reducedMotion}
-          onCorrectStroke={onCorrectStroke}
-          onMistake={() => {
+          onCorrectStroke={(strokeNum) => {
+            setMistake(null)
+            onCorrectStroke(strokeNum)
+          }}
+          onMistake={(strokeMistake) => {
             setFailedTries((tries) => tries + 1)
-            const action = onMistake()
-            if (action === "retry") canvasRef.current?.restartQuiz()
-            else canvasRef.current?.revealCharacter()
+            setMistake(strokeMistake)
+            // On "retry" the quiz stays live: accepted strokes remain and the
+            // same stroke is asked again, right after the hint flash.
+            if (onMistake() === "failed") canvasRef.current?.revealCharacter()
           }}
           onComplete={onComplete}
           onLoadError={onLoadError}
@@ -215,6 +227,16 @@ export function WriteDrillCard({
 
         {/* Reserved height: feedback must not shove the canvas around. */}
         <div className="h-5 text-sm">
+          {mistake && !isCorrect && !isMissed && (
+            <span className="text-amber-600 dark:text-amber-400">
+              {t(
+                mistake.isBackwards
+                  ? "writeDrill.strokeBackwards"
+                  : "writeDrill.strokeMismatch",
+                { num: mistake.strokeNum + 1 }
+              )}
+            </span>
+          )}
           {isCorrect && (
             <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
               <Check className="size-4" />

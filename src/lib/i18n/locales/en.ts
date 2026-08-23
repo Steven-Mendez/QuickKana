@@ -162,6 +162,8 @@ export const en = {
     watchStrokes: "watch the stroke order",
     completedWithMistakes: "<jp>{{char}}</jp> — some strokes were off",
     itWas: "It was <jp>{{char}}</jp>",
+    strokeBackwards: "Stroke {{num}} was backwards — start from the other end",
+    strokeMismatch: "Stroke {{num}} wasn't right — watch the flash",
     triesLeft_one: "{{count}} try left",
     triesLeft_other: "{{count}} tries left",
     ariaCanvas: "Trace the kana for {{romaji}}",
@@ -184,6 +186,8 @@ export const en = {
     skip: "Skip",
     finish: "Finish",
     unlockBanner: "Lesson {{number}} unlocked ·",
+    nowWriting: "Now: writing",
+    nowReading: "Now: reading",
   },
   summary: {
     complete: "Session complete",
